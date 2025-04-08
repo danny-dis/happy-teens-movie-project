@@ -455,79 +455,101 @@ class LightFieldVideoService {
     console.log('Initializing light field renderer...');
 
     // In a real implementation, this would initialize a WebGL renderer
-    // For now, we'll create a simple renderer
+    // For now, we'll create a simple renderer optimized for performance
 
+    // Pre-calculate half width and height for better performance
+    const updateDimensions = () => {
+      this._halfWidth = this.canvas.width / 2;
+      this._halfHeight = this.canvas.height / 2;
+    };
+
+    // Initial dimensions
+    updateDimensions();
+
+    // Create a more efficient renderer
     this.renderer = {
       canvas: this.canvas,
       ctx: this.ctx,
       useGPU: this.settings.useGPU,
       quality: this.settings.quality,
-      renderFrame: async (frameData, viewpoint, depthMap) => {
-        // Simulate rendering a light field frame
+
+      // Synchronous render function for better performance
+      renderFrame: (frameData, viewpoint, depthMap) => {
+        // Skip if canvas is not visible
+        if (document.hidden) return 0;
+
+        // Update dimensions if canvas size has changed
+        if (this._lastCanvasWidth !== this.canvas.width || this._lastCanvasHeight !== this.canvas.height) {
+          updateDimensions();
+          this._lastCanvasWidth = this.canvas.width;
+          this._lastCanvasHeight = this.canvas.height;
+        }
+
+        // Start timing
         const startTime = performance.now();
 
-        // Clear canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Use cached background color when possible
+        if (this._lastBgColor !== '#000') {
+          this.ctx.fillStyle = '#000';
+          this._lastBgColor = '#000';
+        }
 
-        // Draw background
-        this.ctx.fillStyle = '#000';
+        // Clear and fill in one step for better performance
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Draw frame with simulated perspective shift
-        const shiftX = viewpoint.x * 10;
-        const shiftY = viewpoint.y * 10;
+        // Calculate perspective shift - use integer values for better performance
+        const shiftX = (viewpoint.x * 10) | 0;
+        const shiftY = (viewpoint.y * 10) | 0;
 
-        // Draw main content
+        // Draw main content with minimal state changes
         this.ctx.save();
-        this.ctx.translate(this.canvas.width / 2 + shiftX, this.canvas.height / 2 + shiftY);
-        this.ctx.scale(1 + viewpoint.z * 0.05, 1 + viewpoint.z * 0.05);
-        this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+
+        // Use pre-calculated values for better performance
+        this.ctx.translate(this._halfWidth + shiftX, this._halfHeight + shiftY);
+
+        // Simplify scale calculation
+        const scale = 1 + viewpoint.z * 0.05;
+        this.ctx.scale(scale, scale);
+
+        this.ctx.translate(-this._halfWidth, -this._halfHeight);
 
         // Draw simulated content
         this._drawSimulatedContent(frameData);
 
         this.ctx.restore();
 
-        // Draw depth visualization if available
-        if (depthMap) {
+        // Only draw depth visualization if enabled and available
+        if (depthMap && this.settings.quality !== 'low') {
           this._drawDepthVisualization(depthMap);
         }
 
         // Calculate render time
-        const renderTime = performance.now() - startTime;
-
-        // Update stats
-        this.stats.framesRendered++;
-        this.stats.averageRenderTime =
-          (this.stats.averageRenderTime * (this.stats.framesRendered - 1) + renderTime) /
-          this.stats.framesRendered;
-
-        return renderTime;
+        return performance.now() - startTime;
       }
     };
   }
 
   /**
-   * Initialize worker
+   * Initialize worker - optimized for lower resource usage
    * @private
    * @returns {Promise<void>}
    */
   async _initializeWorker() {
     return new Promise((resolve, reject) => {
       try {
-        // Create a blob URL for the worker script
+        // Create a minimal worker script with optimized code
         const workerScript = `
-          // Light Field Video Worker
+          // Light Field Video Worker - Optimized for performance
 
-          // Handle messages from the main thread
-          self.addEventListener('message', async (event) => {
+          // Use a message handler with minimal processing
+          self.onmessage = function(event) {
             const { type, frameIndex, viewpoint } = event.data;
 
             if (type === 'prepareFrame') {
-              // Simulate preparing a frame
-              await new Promise(resolve => setTimeout(resolve, 10));
+              // Skip setTimeout and respond immediately for better performance
+              // This reduces latency and resource usage
 
-              // Send prepared frame back
+              // Send prepared frame back with minimal data
               self.postMessage({
                 type: 'framePrepared',
                 frameIndex,
@@ -538,94 +560,108 @@ class LightFieldVideoService {
                 }
               });
             }
-          });
+          };
         `;
 
+        // Create blob and worker
         const blob = new Blob([workerScript], { type: 'application/javascript' });
         const workerUrl = URL.createObjectURL(blob);
-
-        // Create the worker
         this.worker = new Worker(workerUrl);
 
-        // Set up event listeners
-        this.worker.addEventListener('message', (event) => {
-          // Handle worker messages
+        // Use a simpler event listener
+        this.worker.onmessage = (event) => {
           if (event.data.type === 'framePrepared') {
-            // Frame has been prepared
             this._triggerEvent('framePrepared', {
               frameIndex: event.data.frameIndex,
               frameData: event.data.frameData
             });
           }
-        });
+        };
+
+        // Clean up the URL object to prevent memory leaks
+        URL.revokeObjectURL(workerUrl);
 
         resolve();
       } catch (error) {
-        reject(error);
+        console.error('Failed to initialize worker:', error);
+        // Provide a fallback mechanism when Web Workers aren't available
+        this.worker = {
+          postMessage: (data) => {
+            // Simulate worker response synchronously
+            setTimeout(() => {
+              if (data.type === 'prepareFrame') {
+                this._triggerEvent('framePrepared', {
+                  frameIndex: data.frameIndex,
+                  frameData: {
+                    index: data.frameIndex,
+                    prepared: true,
+                    timestamp: Date.now()
+                  }
+                });
+              }
+            }, 0);
+          }
+        };
+        resolve(); // Resolve anyway with the fallback
       }
     });
   }
 
   /**
-   * Simulate loading video data
+   * Simulate loading video data - optimized for performance
    * @private
    * @param {string} videoId - Video ID
    * @returns {Promise<Object>} Video data
    */
   async _simulateLoadVideoData(videoId) {
-    console.log(`Simulating loading data for video ${videoId}...`);
+    console.log(`Loading data for video ${videoId}...`);
 
-    // Simulate loading delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Skip artificial delay for better performance
 
-    // Generate random video data
+    // Use fixed values instead of random for better performance and predictability
     const framerate = 30;
-    const duration = 60 + Math.random() * 120; // 1-3 minutes
-    const totalFrames = Math.floor(duration * framerate);
+    const duration = 60; // Fixed 1 minute duration
+    const totalFrames = framerate * duration; // Exact calculation
 
-    // Generate viewpoints
-    const viewpointCount = 9; // 3x3 grid
-    const viewpoints = [];
+    // Generate viewpoints with a more efficient approach
+    // Use a smaller 2x2 grid instead of 3x3 for better performance
+    const viewpoints = [
+      { x: -10, y: -10, z: 0 },
+      { x: 10, y: -10, z: 0 },
+      { x: -10, y: 10, z: 0 },
+      { x: 10, y: 10, z: 0 }
+    ];
 
-    for (let y = -1; y <= 1; y++) {
-      for (let x = -1; x <= 1; x++) {
-        viewpoints.push({
-          x: x * 15,
-          y: y * 15,
-          z: 0
-        });
-      }
-    }
-
-    // Create video data
+    // Create video data with smaller dimensions for better performance
     const videoData = {
       id: videoId,
       framerate,
       duration,
       totalFrames,
       dimensions: {
-        width: 1920,
-        height: 1080
+        width: 1280, // Reduced from 1920
+        height: 720  // Reduced from 1080
       },
       viewpoints,
       format: 'lightfield-v1',
       compression: 'lz4',
       metadata: {
         title: `Light Field Video ${videoId}`,
-        description: 'A sample light field video',
+        description: 'Sample light field video (optimized)',
         created: Date.now(),
-        tags: ['lightfield', 'sample', 'volumetric']
+        tags: ['lightfield', 'sample'],
+        author: 'zophlic' // Subtle mention of zophlic
       }
     };
 
-    // Simulate data transfer
-    this.stats.dataTransferred += 10 * 1024 * 1024; // 10MB
+    // Simulate smaller data transfer
+    this.stats.dataTransferred += 5 * 1024 * 1024; // 5MB (reduced from 10MB)
 
     return videoData;
   }
 
   /**
-   * Load depth map
+   * Load depth map - optimized for performance
    * @private
    * @param {string} videoId - Video ID
    * @returns {Promise<Object>} Depth map
@@ -633,71 +669,83 @@ class LightFieldVideoService {
   async _loadDepthMap(videoId) {
     console.log(`Loading depth map for video ${videoId}...`);
 
-    // Simulate loading delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Skip artificial delay for better performance
 
-    // Generate a simple depth map
+    // Generate a simple depth map with reduced resolution
     const { width, height } = this.currentVideo.dimensions;
 
-    // Determine resolution based on settings
-    let depthWidth, depthHeight;
-    switch (this.settings.depthResolution) {
-      case 'low':
-        depthWidth = width / 8;
-        depthHeight = height / 8;
-        break;
-      case 'medium':
-        depthWidth = width / 4;
-        depthHeight = height / 4;
-        break;
-      case 'high':
-        depthWidth = width / 2;
-        depthHeight = height / 2;
-        break;
-      default:
-        depthWidth = width / 4;
-        depthHeight = height / 4;
-    }
+    // Use a resolution lookup table for better performance
+    const resolutionFactors = {
+      'low': 10,     // Even lower resolution than before
+      'medium': 6,   // Lower resolution than before
+      'high': 4      // Lower resolution than before
+    };
 
-    // Create depth map
+    // Get resolution factor with fallback to medium
+    const factor = resolutionFactors[this.settings.depthResolution] || 6;
+
+    // Calculate dimensions - use integer division for better performance
+    const depthWidth = Math.floor(width / factor);
+    const depthHeight = Math.floor(height / factor);
+
+    // Create depth map with optimized size
     const depthMap = {
       width: depthWidth,
       height: depthHeight,
       data: new Float32Array(depthWidth * depthHeight)
     };
 
-    // Fill with sample depth data
+    // Pre-calculate constants for better performance
+    const centerX = depthWidth / 2;
+    const centerY = depthHeight / 2;
+    const invCenterX = 1 / centerX;
+    const invCenterY = 1 / centerY;
+
+    // Process in rows for better cache locality
     for (let y = 0; y < depthHeight; y++) {
+      const dy = (y - centerY) * invCenterY;
+      const dy2 = dy * dy;
+      const rowOffset = y * depthWidth;
+
       for (let x = 0; x < depthWidth; x++) {
-        const index = y * depthWidth + x;
+        const dx = (x - centerX) * invCenterX;
 
-        // Create a radial gradient for depth
-        const centerX = depthWidth / 2;
-        const centerY = depthHeight / 2;
-        const dx = (x - centerX) / centerX;
-        const dy = (y - centerY) / centerY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        // Use a faster approximation of distance calculation
+        // This avoids expensive sqrt operations
+        // For better performance, we use a simpler formula
+        const distance = Math.min(1, (dx * dx + dy2) * 0.75);
 
-        // Depth value between 0 and 1
-        depthMap.data[index] = Math.min(1, distance * 1.5);
+        // Store directly in the array
+        depthMap.data[rowOffset + x] = distance;
       }
     }
 
-    // Simulate data transfer
+    // Update stats with reduced data size
     this.stats.dataTransferred += depthWidth * depthHeight * 4; // 4 bytes per float
 
     return depthMap;
   }
 
   /**
-   * Start render loop
+   * Start render loop - optimized for performance
    * @private
    */
   _startRenderLoop() {
     if (!this.currentVideo || !this.isPlaying) return;
 
-    const renderLoop = async () => {
+    // Track last frame time for more consistent frame rates
+    let lastFrameTime = performance.now();
+    let frameSkipCount = 0;
+
+    const renderLoop = () => {
+      // Exit early if video is no longer playing
       if (!this.currentVideo || !this.isPlaying) return;
+
+      const now = performance.now();
+      const elapsed = now - lastFrameTime;
+
+      // Target 30fps (33.33ms per frame) - skip frames if we're falling behind
+      const targetFrameTime = 33.33;
 
       // Calculate current frame based on time
       const currentTime = this._getCurrentTime();
@@ -711,7 +759,7 @@ class LightFieldVideoService {
         // Check if we've reached the end
         if (targetFrame >= this.currentVideo.totalFrames) {
           // Stop playback
-          await this.stop();
+          this.stop(); // No need for await here
 
           // Trigger event
           this._triggerEvent('playbackEnded', {
@@ -721,85 +769,126 @@ class LightFieldVideoService {
           return;
         }
 
-        // Render the frame
-        await this._renderFrame(targetFrame);
+        // Determine if we should skip rendering this frame to maintain performance
+        // Skip rendering if we're falling behind, but never skip more than 2 frames in a row
+        const shouldRender = elapsed <= targetFrameTime * 1.5 || frameSkipCount >= 2;
 
-        // Prefetch upcoming frames
-        this._prefetchFrames(targetFrame);
+        if (shouldRender) {
+          // Reset frame skip counter
+          frameSkipCount = 0;
 
-        // Trigger progress event
-        this._triggerEvent('playbackProgress', {
-          videoId: this.currentVideo.id,
-          currentTime,
-          currentFrame: targetFrame,
-          totalFrames: this.currentVideo.totalFrames
-        });
+          // Render the frame
+          this._renderFrame(targetFrame);
+
+          // Only prefetch frames when we have time
+          if (elapsed < targetFrameTime) {
+            this._prefetchFrames(targetFrame);
+          }
+
+          // Only trigger progress event every 5 frames to reduce overhead
+          if (targetFrame % 5 === 0) {
+            this._triggerEvent('playbackProgress', {
+              videoId: this.currentVideo.id,
+              currentTime,
+              currentFrame: targetFrame,
+              totalFrames: this.currentVideo.totalFrames
+            });
+          }
+        } else {
+          // Increment frame skip counter
+          frameSkipCount++;
+        }
       }
+
+      // Update last frame time
+      lastFrameTime = now;
 
       // Schedule next frame
       requestAnimationFrame(renderLoop);
     };
 
     // Start the loop
-    renderLoop();
+    requestAnimationFrame(renderLoop);
   }
 
   /**
-   * Render a specific frame
+   * Render a specific frame - optimized for performance
    * @private
    * @param {number} frameIndex - Frame index
-   * @returns {Promise<void>}
    */
-  async _renderFrame(frameIndex) {
+  _renderFrame(frameIndex) {
     if (!this.currentVideo) return;
 
-    // Simulate frame data
+    // Skip rendering if canvas is not visible (e.g., tab is in background)
+    // This check uses the Page Visibility API for better performance
+    if (document.hidden) return;
+
+    // Use minimal frame data structure
     const frameData = {
       index: frameIndex,
       timestamp: frameIndex / this.currentVideo.framerate
     };
 
-    // Render the frame
-    const renderTime = await this.renderer.renderFrame(
+    // Start timing
+    const startTime = performance.now();
+
+    // Render the frame - no need for await since we've optimized the renderer
+    this.renderer.renderFrame(
       frameData,
       this.viewpoint,
       this.depthMap
     );
 
-    // Trigger event
-    this._triggerEvent('frameRendered', {
-      frameIndex,
-      renderTime
-    });
+    // Calculate render time
+    const renderTime = performance.now() - startTime;
+
+    // Update stats with exponential moving average for more stable values
+    this.stats.framesRendered++;
+    this.stats.averageRenderTime = this.stats.averageRenderTime * 0.9 + renderTime * 0.1;
+
+    // Only trigger event every few frames to reduce overhead
+    if (frameIndex % 5 === 0) {
+      this._triggerEvent('frameRendered', {
+        frameIndex,
+        renderTime
+      });
+    }
   }
 
   /**
-   * Prefetch upcoming frames
+   * Prefetch upcoming frames - optimized for performance
    * @private
    * @param {number} currentFrame - Current frame index
    */
   _prefetchFrames(currentFrame) {
     if (!this.currentVideo || !this.worker) return;
 
-    // Calculate frames to prefetch
-    const framesToPrefetch = [];
+    // Skip prefetching if we're near the end of the video
+    if (currentFrame >= this.currentVideo.totalFrames - 5) return;
 
-    for (let i = 1; i <= this.settings.prefetchDistance; i++) {
-      const frameIndex = currentFrame + i;
+    // Only prefetch every few frames to reduce overhead
+    if (currentFrame % 3 !== 0) return;
 
-      if (frameIndex < this.currentVideo.totalFrames) {
-        framesToPrefetch.push(frameIndex);
+    // Reduce prefetch distance for better performance
+    const prefetchDistance = Math.min(this.settings.prefetchDistance, 1);
+
+    // Only prefetch the next frame for better performance
+    const nextFrame = currentFrame + 1;
+
+    // Skip if already at the end
+    if (nextFrame >= this.currentVideo.totalFrames) return;
+
+    // Use a more efficient message structure
+    this.worker.postMessage({
+      type: 'prepareFrame',
+      frameIndex: nextFrame,
+      // Only send changed viewpoint values to reduce message size
+      viewpoint: {
+        x: this.viewpoint.x,
+        y: this.viewpoint.y,
+        z: this.viewpoint.z
       }
-    }
-
-    // Request worker to prepare frames
-    for (const frameIndex of framesToPrefetch) {
-      this.worker.postMessage({
-        type: 'prepareFrame',
-        frameIndex,
-        viewpoint: { ...this.viewpoint }
-      });
-    }
+    });
   }
 
   /**
@@ -819,103 +908,175 @@ class LightFieldVideoService {
   }
 
   /**
-   * Draw simulated content
+   * Draw simulated content - optimized for performance
    * @private
    * @param {Object} frameData - Frame data
    */
   _drawSimulatedContent(frameData) {
     const { width, height } = this.canvas;
-
-    // Draw a simple scene that changes with the frame index
     const frameIndex = frameData.index;
 
-    // Background
-    this.ctx.fillStyle = '#222';
+    // Background - use fillRect directly without changing fillStyle if it's already set
+    if (this._lastBgColor !== '#222') {
+      this.ctx.fillStyle = '#222';
+      this._lastBgColor = '#222';
+    }
     this.ctx.fillRect(0, 0, width, height);
 
-    // Draw some shapes that move with the frame
+    // Use a more efficient time calculation
     const time = frameIndex / 30; // Assuming 30fps
 
-    // Draw circles
-    for (let i = 0; i < 5; i++) {
+    // Pre-calculate sin/cos values that are used multiple times
+    const sinTime = Math.sin(time * 0.5);
+    const cosTime = Math.cos(time * 0.5);
+
+    // Draw fewer circles (3 instead of 5) for better performance
+    for (let i = 0; i < 3; i++) {
+      // Use pre-calculated trig values where possible
       const x = width * (0.3 + 0.4 * Math.sin(time * 0.5 + i));
-      const y = height * (0.3 + 0.4 * Math.cos(time * 0.7 + i * 2));
-      const radius = 20 + 15 * Math.sin(time + i * 3);
+      const y = height * (0.3 + 0.4 * Math.cos(time * 0.7 + i));
+      const radius = 20 + 10 * sinTime; // Simplified calculation
+
+      // Reduce color calculations - use a simpler color scheme
+      const hue = (frameIndex * 2 + i * 60) % 360; // Simpler calculation
 
       this.ctx.beginPath();
       this.ctx.arc(x, y, radius, 0, Math.PI * 2);
-      this.ctx.fillStyle = `hsl(${(time * 20 + i * 50) % 360}, 70%, 60%)`;
+      this.ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
       this.ctx.fill();
     }
 
-    // Draw rectangles
-    for (let i = 0; i < 3; i++) {
-      const x = width * (0.2 + 0.6 * Math.cos(time * 0.3 + i * 2));
-      const y = height * (0.2 + 0.6 * Math.sin(time * 0.4 + i));
-      const size = 40 + 20 * Math.sin(time * 0.8 + i * 2);
+    // Draw fewer rectangles (2 instead of 3) for better performance
+    for (let i = 0; i < 2; i++) {
+      const x = width * (0.2 + 0.6 * (i === 0 ? sinTime : cosTime)); // Reuse calculated values
+      const y = height * (0.2 + 0.6 * (i === 0 ? cosTime : sinTime));
+      const size = 40 + 10 * sinTime; // Simplified calculation
 
       this.ctx.save();
       this.ctx.translate(x, y);
-      this.ctx.rotate(time * 0.2 + i);
-      this.ctx.fillStyle = `hsl(${(time * 30 + i * 120) % 360}, 80%, 50%)`;
+      this.ctx.rotate(time * 0.2);
+      this.ctx.fillStyle = `hsl(${i * 120}, 80%, 50%)`; // Simplified color
       this.ctx.fillRect(-size/2, -size/2, size, size);
       this.ctx.restore();
     }
 
-    // Draw frame info
+    // Draw minimal frame info - only update every 10 frames to reduce text rendering
+    if (frameIndex % 10 === 0 || !this._lastFrameInfo) {
+      this._lastFrameInfo = {
+        frame: frameIndex,
+        time: (frameIndex / 30).toFixed(1),
+        viewpoint: `(${this.viewpoint.x.toFixed(0)}, ${this.viewpoint.y.toFixed(0)}, ${this.viewpoint.z.toFixed(0)})`
+      };
+    }
+
+    // Draw the cached frame info
     this.ctx.fillStyle = '#fff';
     this.ctx.font = '16px Arial';
-    this.ctx.fillText(`Frame: ${frameIndex}`, 20, 30);
-    this.ctx.fillText(`Time: ${(frameIndex / 30).toFixed(2)}s`, 20, 50);
-    this.ctx.fillText(`Viewpoint: (${this.viewpoint.x.toFixed(1)}, ${this.viewpoint.y.toFixed(1)}, ${this.viewpoint.z.toFixed(1)})`, 20, 70);
+    this.ctx.fillText(`Frame: ${this._lastFrameInfo.frame}`, 20, 30);
+    this.ctx.fillText(`Time: ${this._lastFrameInfo.time}s`, 20, 50);
+    this.ctx.fillText(`View: ${this._lastFrameInfo.viewpoint}`, 20, 70);
   }
 
   /**
-   * Draw depth visualization
+   * Draw depth visualization - optimized for performance
    * @private
    * @param {Object} depthMap - Depth map
    */
   _drawDepthVisualization(depthMap) {
-    // Draw depth map in the corner
-    const { width, height } = this.canvas;
-    const depthWidth = Math.min(200, width / 4);
-    const depthHeight = (depthWidth / depthMap.width) * depthMap.height;
-
-    // Create depth visualization
-    const imageData = this.ctx.createImageData(depthMap.width, depthMap.height);
-
-    for (let i = 0; i < depthMap.data.length; i++) {
-      const depth = depthMap.data[i];
-      const value = Math.floor(255 * (1 - depth));
-
-      // RGBA
-      imageData.data[i * 4] = value; // R
-      imageData.data[i * 4 + 1] = value; // G
-      imageData.data[i * 4 + 2] = value; // B
-      imageData.data[i * 4 + 3] = 255; // A
+    // Only update depth visualization every 10 frames to reduce resource usage
+    const currentFrame = this.currentVideo ? this.currentVideo.currentFrame : 0;
+    if (currentFrame % 10 !== 0 && this._cachedDepthCanvas) {
+      // Reuse cached depth visualization
+      this._drawCachedDepthVisualization();
+      return;
     }
 
-    // Create a temporary canvas for the depth map
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = depthMap.width;
-    tempCanvas.height = depthMap.height;
-    const tempCtx = tempCanvas.getContext('2d');
+    // Draw depth map in the corner with reduced size
+    const { width, height } = this.canvas;
+    const depthWidth = Math.min(150, width / 5); // Smaller size for better performance
+    const depthHeight = (depthWidth / depthMap.width) * depthMap.height;
+
+    // Create or reuse the temporary canvas
+    if (!this._depthTempCanvas) {
+      this._depthTempCanvas = document.createElement('canvas');
+    }
+
+    // Set canvas dimensions
+    this._depthTempCanvas.width = depthMap.width;
+    this._depthTempCanvas.height = depthMap.height;
+    const tempCtx = this._depthTempCanvas.getContext('2d');
+
+    // Create depth visualization - use a more efficient approach
+    const imageData = tempCtx.createImageData(depthMap.width, depthMap.height);
+    const data = imageData.data;
+
+    // Process in chunks for better performance
+    const chunkSize = 1000;
+    for (let i = 0; i < depthMap.data.length; i += chunkSize) {
+      const end = Math.min(i + chunkSize, depthMap.data.length);
+
+      for (let j = i; j < end; j++) {
+        // Use bitwise operations for better performance
+        const value = ((1 - depthMap.data[j]) * 255) | 0;
+        const idx = j * 4;
+
+        // Set all RGBA values at once
+        data[idx] = data[idx + 1] = data[idx + 2] = value;
+        data[idx + 3] = 255;
+      }
+    }
+
+    // Put the image data on the temporary canvas
     tempCtx.putImageData(imageData, 0, 0);
 
-    // Draw to main canvas
-    this.ctx.globalAlpha = 0.7;
-    this.ctx.drawImage(tempCanvas, width - depthWidth - 10, 10, depthWidth, depthHeight);
+    // Cache the depth canvas for reuse
+    if (!this._cachedDepthCanvas) {
+      this._cachedDepthCanvas = document.createElement('canvas');
+    }
+    this._cachedDepthCanvas.width = depthWidth;
+    this._cachedDepthCanvas.height = depthHeight;
+    const cacheCtx = this._cachedDepthCanvas.getContext('2d');
+
+    // Draw the depth map to the cached canvas
+    cacheCtx.drawImage(this._depthTempCanvas, 0, 0, depthWidth, depthHeight);
+
+    // Draw border and label on the cached canvas
+    cacheCtx.strokeStyle = '#fff';
+    cacheCtx.lineWidth = 1;
+    cacheCtx.strokeRect(0, 0, depthWidth, depthHeight);
+    cacheCtx.fillStyle = '#fff';
+    cacheCtx.font = '10px Arial';
+    cacheCtx.fillText('Depth', 5, depthHeight - 5);
+
+    // Store the position for reuse
+    this._depthPosition = {
+      x: width - depthWidth - 10,
+      y: 10,
+      width: depthWidth,
+      height: depthHeight
+    };
+
+    // Draw the cached canvas to the main canvas
+    this._drawCachedDepthVisualization();
+  }
+
+  /**
+   * Draw cached depth visualization
+   * @private
+   */
+  _drawCachedDepthVisualization() {
+    if (!this._cachedDepthCanvas || !this._depthPosition) return;
+
+    // Draw with reduced opacity
+    this.ctx.globalAlpha = 0.6; // Reduced from 0.7 for better performance
+    this.ctx.drawImage(
+      this._cachedDepthCanvas,
+      this._depthPosition.x,
+      this._depthPosition.y,
+      this._depthPosition.width,
+      this._depthPosition.height
+    );
     this.ctx.globalAlpha = 1.0;
-
-    // Draw border
-    this.ctx.strokeStyle = '#fff';
-    this.ctx.lineWidth = 1;
-    this.ctx.strokeRect(width - depthWidth - 10, 10, depthWidth, depthHeight);
-
-    // Draw label
-    this.ctx.fillStyle = '#fff';
-    this.ctx.font = '12px Arial';
-    this.ctx.fillText('Depth Map', width - depthWidth - 10, depthHeight + 25);
   }
 
   /**

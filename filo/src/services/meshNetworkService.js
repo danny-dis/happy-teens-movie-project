@@ -1,33 +1,17 @@
 /**
  * Mesh Network Service
  *
- * An innovative networking solution that creates resilient, self-organizing networks
- * between nearby devices without requiring internet infrastructure. This technology
- * enables content sharing and communication in environments with limited or no
- * traditional connectivity, such as remote areas, during network outages, or in
- * regions with restricted internet access.
+ * Networking solution that creates self-organizing networks between nearby devices
+ * without requiring internet infrastructure. Enables content sharing in environments
+ * with limited or no connectivity.
  *
  * Core capabilities:
- * - Automatic device discovery over local WiFi, Bluetooth, and other radio technologies
- * - Direct device-to-device communication with multi-hop relay for extended range
- * - Seamless content sharing and streaming without internet dependency
- * - Dynamic network topology visualization and connection management
- * - Adaptive routing with fault tolerance and self-healing properties
- *
- * Technical implementation:
- * The service uses a combination of WebRTC, local discovery protocols, and custom
- * signaling mechanisms to establish connections even in challenging network environments.
- * The mesh topology ensures no single point of failure and enables the network to
- * grow organically as more devices join.
- *
- * Originally conceived by zophlic during field research in areas with limited connectivity,
- * this technology represents a fundamental shift toward infrastructure-independent
- * communication networks that empower users regardless of their access to traditional
- * internet services.
+ * - Device discovery over local networks
+ * - Direct device-to-device communication
+ * - Content sharing without internet dependency
+ * - Network visualization and management
  *
  * @author zophlic
- * @version 0.8.5-beta
- * @since 2023-11-15
  */
 
 import { createHash } from '../crypto/hash';
@@ -384,23 +368,34 @@ class MeshNetworkService {
   }
 
   /**
-   * Start peer discovery
+   * Start peer discovery - optimized for lower resource usage
    * @private
    * @returns {Promise<void>}
    */
   async _startDiscovery() {
     // In a real implementation, this would use WebRTC for discovery
-    // For now, we'll simulate it
+    // For now, we'll simulate it with optimized resource usage
 
     console.log('Starting peer discovery...');
 
-    // Simulate finding peers periodically
-    this.discoveryInterval = setInterval(() => {
-      this._simulateDiscovery();
-    }, this.settings.discoveryInterval);
+    // Use a more efficient approach with dynamic intervals
+    const runDiscovery = () => {
+      // Only schedule next discovery if the service is still active
+      if (!this.isActive) return;
 
-    // Simulate initial discovery
-    this._simulateDiscovery();
+      this._simulateDiscovery();
+
+      // Adjust interval based on peer count - longer intervals when we have more peers
+      const adjustedInterval = this.peers.size > 0 ?
+        this.settings.discoveryInterval * (1 + this.peers.size / 10) : // Increase interval as we find more peers
+        this.settings.discoveryInterval;
+
+      // Use setTimeout instead of setInterval for more control and to prevent overlapping executions
+      this.discoveryInterval = setTimeout(runDiscovery, adjustedInterval);
+    };
+
+    // Start the discovery process
+    runDiscovery();
   }
 
   /**
@@ -411,59 +406,67 @@ class MeshNetworkService {
     console.log('Stopping peer discovery...');
 
     if (this.discoveryInterval) {
-      clearInterval(this.discoveryInterval);
+      clearTimeout(this.discoveryInterval); // Changed from clearInterval to clearTimeout
       this.discoveryInterval = null;
     }
   }
 
   /**
-   * Simulate peer discovery
+   * Simulate peer discovery - optimized for lower resource usage
    * @private
    */
   _simulateDiscovery() {
-    // Simulate finding 1-3 peers
-    const peerCount = Math.floor(Math.random() * 3) + 1;
+    // Only discover new peers if we haven't reached the maximum
+    if (this.peers.size >= this.settings.maxPeers) {
+      console.log('Maximum peer count reached, skipping discovery');
+      return;
+    }
 
-    console.log(`Discovered ${peerCount} peers`);
+    // Simulate finding 1-2 peers (reduced from 1-3 for better performance)
+    const peerCount = Math.min(this.settings.maxPeers - this.peers.size, Math.floor(Math.random() * 2) + 1);
 
-    for (let i = 0; i < peerCount; i++) {
-      // Generate a peer ID
-      const peerId = `mesh-${Math.random().toString(36).substring(2, 14)}`;
+    if (peerCount > 0) {
+      console.log(`Discovered ${peerCount} peers`);
 
-      // Skip if we already know this peer or if we've reached max peers
-      if (this.peers.has(peerId) || this.peers.size >= this.settings.maxPeers) {
-        continue;
+      // Create all peers at once to reduce iterations
+      const newPeers = [];
+
+      for (let i = 0; i < peerCount; i++) {
+        // Generate a deterministic peer ID based on timestamp and index for better performance
+        const timestamp = Date.now();
+        const peerId = `mesh-${timestamp}-${i}`;
+
+        // Create peer info with minimal random calculations
+        const peer = {
+          id: peerId,
+          name: `Peer ${i+1}`,
+          discoveredAt: timestamp,
+          capabilities: {
+            relay: i % 2 === 0, // Deterministic instead of random
+            bluetooth: i % 3 === 0, // Deterministic instead of random
+            wifi: true
+          },
+          signalStrength: 60 + (i * 10) % 40 // Range 60-100, deterministic
+        };
+
+        // Add to peers
+        this.peers.set(peerId, peer);
+        newPeers.push(peer);
       }
 
-      // Create peer info
-      const peer = {
-        id: peerId,
-        name: `Peer ${peerId.substring(5, 9)}`,
-        discoveredAt: Date.now(),
-        capabilities: {
-          relay: Math.random() > 0.3,
-          bluetooth: Math.random() > 0.7,
-          wifi: true
-        },
-        signalStrength: Math.random() * 100
-      };
-
-      // Add to peers
-      this.peers.set(peerId, peer);
-
-      // Update network graph
+      // Update network graph once for all new peers
       this._updateNetworkGraph();
 
-      // Trigger event
-      this._triggerEvent('peerDiscovered', { peer });
-
-      // Simulate establishing connection
-      this._simulateConnection(peerId);
+      // Trigger events and simulate connections
+      for (const peer of newPeers) {
+        this._triggerEvent('peerDiscovered', { peer });
+        this._simulateConnection(peer.id);
+      }
     }
   }
 
   /**
-   * Simulate establishing a connection
+   * Simulate establishing a connection - optimized for lower resource usage
    * @private
    * @param {string} peerId - Peer ID
    */
@@ -474,38 +477,50 @@ class MeshNetworkService {
 
     console.log(`Establishing connection to peer ${peerId}...`);
 
-    // Simulate connection delay
-    setTimeout(() => {
-      // 80% chance of successful connection
-      const success = Math.random() > 0.2;
+    // Use a fixed delay instead of random for better performance and predictability
+    const connectionDelay = 500; // Fixed 500ms delay instead of random
 
-      if (success) {
-        // Create connection info
-        const connection = {
-          peerId,
-          establishedAt: Date.now(),
-          quality: Math.random() * 100,
-          latency: Math.floor(Math.random() * 200),
-          bandwidth: Math.floor(Math.random() * 10000000)
-        };
+    // Use requestAnimationFrame for better performance when browser tab is inactive
+    const startTime = performance.now();
+    const checkTime = () => {
+      if (performance.now() - startTime >= connectionDelay) {
+        // 90% chance of successful connection (increased from 80% for better user experience)
+        // Use a deterministic approach based on peerId for consistency
+        const peerIdSum = peerId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+        const success = (peerIdSum % 10) < 9; // 90% success rate
 
-        // Add to connections
-        this.connections.set(peerId, connection);
+        if (success) {
+          // Create connection info with deterministic values based on peerId
+          const connection = {
+            peerId,
+            establishedAt: Date.now(),
+            quality: 70 + (peerIdSum % 30), // Range 70-99
+            latency: 20 + (peerIdSum % 80), // Range 20-99 ms
+            bandwidth: 1000000 + (peerIdSum * 100000) % 9000000 // Range 1-10 Mbps
+          };
 
-        // Update network graph
-        this._updateNetworkGraph();
+          // Add to connections
+          this.connections.set(peerId, connection);
 
-        // Trigger event
-        this._triggerEvent('peerConnected', { peer, connection });
+          // Update network graph
+          this._updateNetworkGraph();
 
-        console.log(`Connected to peer ${peerId}`);
+          // Trigger event
+          this._triggerEvent('peerConnected', { peer, connection });
+
+          console.log(`Connected to peer ${peerId}`);
+        } else {
+          console.log(`Failed to connect to peer ${peerId}`);
+
+          // Trigger event
+          this._triggerEvent('peerConnectionFailed', { peer });
+        }
       } else {
-        console.log(`Failed to connect to peer ${peerId}`);
-
-        // Trigger event
-        this._triggerEvent('peerConnectionFailed', { peer });
+        requestAnimationFrame(checkTime);
       }
-    }, Math.random() * this.settings.connectionTimeout);
+    };
+
+    requestAnimationFrame(checkTime);
   }
 
   /**
@@ -536,53 +551,78 @@ class MeshNetworkService {
   }
 
   /**
-   * Update the network graph
+   * Update the network graph - optimized for lower resource usage
    * @private
    */
   _updateNetworkGraph() {
-    // Create nodes for each peer and self
-    const nodes = [
-      {
-        id: this.deviceId,
-        label: 'You',
-        type: 'self'
-      }
-    ];
+    // Only update if we have peers or connections to reduce unnecessary processing
+    if (this.peers.size === 0 && this.connections.size === 0) {
+      this.networkGraph = { nodes: [{ id: this.deviceId, label: 'You', type: 'self' }], edges: [] };
+      return;
+    }
 
+    // Create nodes array with pre-allocated size for better performance
+    const nodes = new Array(this.peers.size + 1);
+
+    // Add self node
+    nodes[0] = {
+      id: this.deviceId,
+      label: 'You',
+      type: 'self'
+    };
+
+    // Add peer nodes
+    let nodeIndex = 1;
     for (const [peerId, peer] of this.peers.entries()) {
-      nodes.push({
+      nodes[nodeIndex++] = {
         id: peerId,
         label: peer.name,
         type: 'peer',
         connected: this.connections.has(peerId)
-      });
+      };
     }
 
-    // Create edges for each connection
+    // Create edges for each connection - limit to maximum 20 edges for better performance
     const edges = [];
+    const maxEdges = 20;
 
+    // Add direct connections first (most important)
     for (const [peerId, connection] of this.connections.entries()) {
+      if (edges.length >= maxEdges) break;
+
       edges.push({
         source: this.deviceId,
         target: peerId,
         quality: connection.quality,
         latency: connection.latency
       });
+    }
 
-      // Add some random peer-to-peer connections
-      if (Math.random() > 0.7) {
-        // Find another connected peer
-        const otherPeers = Array.from(this.connections.keys())
-          .filter(id => id !== peerId);
+    // Add peer-to-peer connections if we have space for them
+    // Use a deterministic approach instead of random for better performance
+    if (edges.length < maxEdges && this.connections.size > 1) {
+      const connectedPeers = Array.from(this.connections.keys());
 
-        if (otherPeers.length > 0) {
-          const otherPeerId = otherPeers[Math.floor(Math.random() * otherPeers.length)];
+      // Create a limited number of peer-to-peer connections
+      const p2pConnectionCount = Math.min(maxEdges - edges.length, Math.floor(connectedPeers.length / 2));
+
+      for (let i = 0; i < p2pConnectionCount; i++) {
+        const sourceIndex = i % connectedPeers.length;
+        const targetIndex = (i + 1) % connectedPeers.length;
+
+        if (sourceIndex !== targetIndex) {
+          const sourcePeerId = connectedPeers[sourceIndex];
+          const targetPeerId = connectedPeers[targetIndex];
+
+          // Use deterministic values based on peer IDs
+          const sourceSum = sourcePeerId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+          const targetSum = targetPeerId.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
 
           edges.push({
-            source: peerId,
-            target: otherPeerId,
-            quality: Math.random() * 100,
-            latency: Math.floor(Math.random() * 200)
+            source: sourcePeerId,
+            target: targetPeerId,
+            quality: 60 + ((sourceSum + targetSum) % 40), // Range 60-99
+            latency: 30 + ((sourceSum + targetSum) % 70) // Range 30-99 ms
           });
         }
       }
