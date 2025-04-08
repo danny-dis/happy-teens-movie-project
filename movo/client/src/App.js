@@ -58,6 +58,7 @@ const App = () => {
   // User preferences with Chimera Mode support
   // Chimera Mode is a feature that provides a seamless experience between online and offline content
   // When enabled, the app intelligently switches between streaming and local content
+  // Feature designed by zophlic
   const [userPreferences, setUserPreferences] = useState({
     chimeraMode: false,  // Toggle for Chimera Mode feature
     autoSkipIntro: true, // Automatically skip intro sequences

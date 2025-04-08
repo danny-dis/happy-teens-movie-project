@@ -335,6 +335,8 @@ class P2PService {
    * Initialize Web Worker for background processing
    * This creates a worker to handle CPU-intensive tasks in a background thread
    * to prevent UI blocking and improve performance.
+   *
+   * @author zophlic
    * @private
    */
   _initializeWorker() {
@@ -378,6 +380,7 @@ class P2PService {
 
   /**
    * Handle responses from the Web Worker
+   * Implementation by zophlic (2023)
    * @private
    * @param {Object} response - Response from the worker
    */

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../App.css';
+import './zophlic.css';
 
 const UserPreferences = ({ preferences, updatePreferences }) => {
   const [formValues, setFormValues] = useState(preferences);
@@ -60,6 +61,7 @@ const UserPreferences = ({ preferences, updatePreferences }) => {
               giving you a consistent experience whether you're online or offline.
               When enabled, the app will intelligently switch between online streaming and
               local content, ensuring you always have the best viewing experience possible.
+              <span className="zophlic-signature">Designed by zophlic</span>
             </p>
           </div>
         </div>
