@@ -1,0 +1,231 @@
+/**
+ * Theme CSS Variables for Movo
+ * Defines color schemes for light and dark modes
+ * 
+ * @author zophlic
+ */
+
+:root {
+  /* Animation durations */
+  --transition-fast: 0.15s;
+  --transition-normal: 0.3s;
+  --transition-slow: 0.5s;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+  
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-round: 50%;
+  
+  /* Font sizes */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-xxl: 32px;
+  
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  
+  /* Z-index layers */
+  --z-index-base: 1;
+  --z-index-dropdown: 10;
+  --z-index-sticky: 100;
+  --z-index-fixed: 1000;
+  --z-index-modal: 2000;
+  --z-index-popover: 3000;
+  --z-index-toast: 4000;
+  --z-index-tooltip: 5000;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+  --shadow-xl: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+  
+  /* Brand colors (shared between themes) */
+  --color-primary: #3498db;
+  --color-primary-light: #5dade2;
+  --color-primary-dark: #2980b9;
+  --color-secondary: #e74c3c;
+  --color-secondary-light: #ec7063;
+  --color-secondary-dark: #c0392b;
+  --color-accent: #f39c12;
+  --color-accent-light: #f8c471;
+  --color-accent-dark: #d35400;
+  --color-success: #2ecc71;
+  --color-warning: #f1c40f;
+  --color-error: #e74c3c;
+  --color-info: #3498db;
+}
+
+/* Light theme (default) */
+:root, .light {
+  /* Background colors */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-bg-tertiary: #e9ecef;
+  --color-bg-accent: #f0f7ff;
+  --color-bg-elevated: #ffffff;
+  
+  /* Text colors */
+  --color-text-primary: #212529;
+  --color-text-secondary: #495057;
+  --color-text-tertiary: #6c757d;
+  --color-text-accent: #3498db;
+  --color-text-inverted: #ffffff;
+  
+  /* Border colors */
+  --color-border-light: #e9ecef;
+  --color-border: #dee2e6;
+  --color-border-dark: #ced4da;
+  
+  /* UI element colors */
+  --color-input-bg: #ffffff;
+  --color-input-border: #ced4da;
+  --color-input-text: #212529;
+  --color-input-placeholder: #6c757d;
+  
+  /* Overlay colors */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-overlay-light: rgba(0, 0, 0, 0.2);
+  
+  /* Scrollbar colors */
+  --color-scrollbar-track: #f1f1f1;
+  --color-scrollbar-thumb: #c1c1c1;
+  --color-scrollbar-thumb-hover: #a8a8a8;
+  
+  /* Shadow color */
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  
+  /* Specific component colors */
+  --color-card-bg: #ffffff;
+  --color-card-border: #e9ecef;
+  --color-navbar-bg: rgba(255, 255, 255, 0.9);
+  --color-sidebar-bg: #f8f9fa;
+  --color-footer-bg: #f8f9fa;
+  --color-tooltip-bg: #212529;
+  --color-tooltip-text: #ffffff;
+  
+  /* Chimera mode colors */
+  --color-streaming-mode: #3498db;
+  --color-local-mode: #2ecc71;
+}
+
+/* Dark theme */
+.dark {
+  /* Background colors */
+  --color-bg-primary: #121212;
+  --color-bg-secondary: #1e1e1e;
+  --color-bg-tertiary: #2d2d2d;
+  --color-bg-accent: #1a2733;
+  --color-bg-elevated: #2d2d2d;
+  
+  /* Text colors */
+  --color-text-primary: #e9ecef;
+  --color-text-secondary: #ced4da;
+  --color-text-tertiary: #adb5bd;
+  --color-text-accent: #5dade2;
+  --color-text-inverted: #212529;
+  
+  /* Border colors */
+  --color-border-light: #2d2d2d;
+  --color-border: #444444;
+  --color-border-dark: #666666;
+  
+  /* UI element colors */
+  --color-input-bg: #2d2d2d;
+  --color-input-border: #444444;
+  --color-input-text: #e9ecef;
+  --color-input-placeholder: #adb5bd;
+  
+  /* Overlay colors */
+  --color-overlay: rgba(0, 0, 0, 0.7);
+  --color-overlay-light: rgba(0, 0, 0, 0.4);
+  
+  /* Scrollbar colors */
+  --color-scrollbar-track: #1e1e1e;
+  --color-scrollbar-thumb: #444444;
+  --color-scrollbar-thumb-hover: #666666;
+  
+  /* Shadow color */
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  
+  /* Specific component colors */
+  --color-card-bg: #1e1e1e;
+  --color-card-border: #2d2d2d;
+  --color-navbar-bg: rgba(18, 18, 18, 0.9);
+  --color-sidebar-bg: #1e1e1e;
+  --color-footer-bg: #1e1e1e;
+  --color-tooltip-bg: #e9ecef;
+  --color-tooltip-text: #212529;
+  
+  /* Chimera mode colors */
+  --color-streaming-mode: #3498db;
+  --color-local-mode: #2ecc71;
+  
+  /* Override shadows for dark mode */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.4), 0 3px 6px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.5), 0 6px 6px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 14px 28px rgba(0, 0, 0, 0.6), 0 10px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-thumb-hover);
+}
+
+/* Theme transition */
+body {
+  transition: background-color var(--transition-normal) ease,
+              color var(--transition-normal) ease;
+}
+
+/* Utility classes */
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+.text-accent { color: var(--color-text-accent); }
+.text-inverted { color: var(--color-text-inverted); }
+
+.bg-primary { background-color: var(--color-bg-primary); }
+.bg-secondary { background-color: var(--color-bg-secondary); }
+.bg-tertiary { background-color: var(--color-bg-tertiary); }
+.bg-accent { background-color: var(--color-bg-accent); }
+.bg-elevated { background-color: var(--color-bg-elevated); }
+
+.border { border: 1px solid var(--color-border); }
+.border-light { border: 1px solid var(--color-border-light); }
+.border-dark { border: 1px solid var(--color-border-dark); }
+
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
