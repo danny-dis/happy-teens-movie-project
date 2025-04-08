@@ -347,6 +347,40 @@ body {
   margin-top: 0;
 }
 
+/* Settings Tab */
+.settings-tab {
+  padding: 1.5rem;
+  background-color: var(--surface-dark);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.settings-tab h2 {
+  color: var(--primary-light);
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.settings-section {
+  margin-bottom: 2rem;
+}
+
+.settings-section h3 {
+  color: var(--text-light);
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.5rem;
+}
+
+.settings-description {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* Player Overlay */
 .player-overlay {
   position: fixed;

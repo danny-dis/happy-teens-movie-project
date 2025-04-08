@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../App.css';
 import './zophlic.css';
+import ExperimentalFeatures from './ExperimentalFeatures';
 
 const UserPreferences = ({ preferences, updatePreferences }) => {
   const [formValues, setFormValues] = useState(preferences);
@@ -162,8 +163,51 @@ const UserPreferences = ({ preferences, updatePreferences }) => {
           </div>
         </div>
 
+        <div className="preferences-section">
+          <h2>Advanced Settings</h2>
+
+          <div className="preference-item">
+            <label htmlFor="enableDebugMode">
+              <input
+                type="checkbox"
+                id="enableDebugMode"
+                name="enableDebugMode"
+                checked={formValues.enableDebugMode || false}
+                onChange={handleChange}
+              />
+              Enable Debug Mode
+            </label>
+            <p className="preference-description">Shows additional debugging information and logs in the console.</p>
+          </div>
+
+          <div className="preference-item">
+            <label htmlFor="showExperimentalFeatures">
+              <input
+                type="checkbox"
+                id="showExperimentalFeatures"
+                name="showExperimentalFeatures"
+                checked={formValues.showExperimentalFeatures || false}
+                onChange={handleChange}
+              />
+              Show Experimental Features
+            </label>
+            <p className="preference-description">
+              Enable access to cutting-edge experimental features that are still in early development.
+              These features may affect stability, performance, or battery life.
+              <span className="zophlic-signature">Curated by zophlic</span>
+            </p>
+          </div>
+        </div>
+
         <button type="submit" className="save-preferences-btn">Save Preferences</button>
       </form>
+
+      {formValues.showExperimentalFeatures && (
+        <ExperimentalFeatures
+          preferences={preferences}
+          updatePreferences={updatePreferences}
+        />
+      )}
 
       <div className="preferences-additional-links">
         <h2>Additional Features</h2>

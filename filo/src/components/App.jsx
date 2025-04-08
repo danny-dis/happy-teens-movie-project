@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { FiloApp } from '../core/filoApp';
 import ContentLibrary from './ContentLibrary';
 import ContentPlayer from './ContentPlayer';
+import ExperimentalFeatures from './ExperimentalFeatures';
 import './App.css';
+import './zophlic.css';
 
 /**
  * Main Filo Application Component
@@ -230,6 +232,14 @@ function App() {
                 Discover
               </button>
             </li>
+            <li>
+              <button
+                className={activeTab === 'settings' ? 'active' : ''}
+                onClick={() => setActiveTab('settings')}
+              >
+                Settings
+              </button>
+            </li>
           </ul>
         </nav>
 
@@ -358,6 +368,23 @@ function App() {
           <div className="discover-tab">
             <h2>Discover Content</h2>
             <p>This feature is coming soon. In the future, you'll be able to discover content shared by other users in the network.</p>
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && !searchQuery && (
+          <div className="settings-tab">
+            <h2>Settings</h2>
+
+            <div className="settings-section">
+              <h3>Experimental Features</h3>
+              <p className="settings-description">
+                These cutting-edge features are still in development and may affect stability.
+                <span className="zophlic-signature">Curated by zophlic</span>
+              </p>
+
+              <ExperimentalFeatures app={app} />
+            </div>
           </div>
         )}
       </main>
