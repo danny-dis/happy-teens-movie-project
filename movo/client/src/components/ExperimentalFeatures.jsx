@@ -3,17 +3,17 @@ import './ExperimentalFeatures.css';
 
 /**
  * Experimental Features Component
- * 
+ *
  * Provides toggles for cutting-edge experimental features that are still in development.
  * These features may be unstable or resource-intensive, so they're disabled by default.
- * 
+ *
  * @author zophlic
  */
 const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [featureToToggle, setFeatureToToggle] = useState(null);
   const [showRestartNotice, setShowRestartNotice] = useState(false);
-  
+
   // Initialize experimental features from preferences or defaults
   const [experimentalFeatures, setExperimentalFeatures] = useState(
     preferences.experimentalFeatures || {
@@ -29,35 +29,35 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
       neuralRendering: false
     }
   );
-  
+
   // Update parent component when features change
   useEffect(() => {
     updatePreferences({
       ...preferences,
       experimentalFeatures
     });
-    
+
     // Check if any features were enabled that require restart
     const restartFeatures = ['quantumResistantCrypto', 'nextGenFormats', 'extendedReality'];
-    const needsRestart = restartFeatures.some(feature => 
+    const needsRestart = restartFeatures.some(feature =>
       experimentalFeatures[feature] !== (preferences.experimentalFeatures?.[feature] || false)
     );
-    
+
     if (needsRestart) {
       setShowRestartNotice(true);
     }
   }, [experimentalFeatures]);
-  
+
   // Handle toggle with confirmation for resource-intensive features
   const handleToggleFeature = (feature) => {
     // Features that need confirmation before enabling
     const intensiveFeatures = [
-      'extendedReality', 
-      'nextGenFormats', 
-      'neuralRendering', 
+      'extendedReality',
+      'nextGenFormats',
+      'neuralRendering',
       'lightFieldVideo'
     ];
-    
+
     if (intensiveFeatures.includes(feature) && !experimentalFeatures[feature]) {
       setFeatureToToggle(feature);
       setShowConfirmation(true);
@@ -69,7 +69,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
       });
     }
   };
-  
+
   // Confirm enabling resource-intensive feature
   const confirmEnableFeature = () => {
     if (featureToToggle) {
@@ -81,13 +81,13 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
       setFeatureToToggle(null);
     }
   };
-  
+
   // Cancel enabling resource-intensive feature
   const cancelEnableFeature = () => {
     setShowConfirmation(false);
     setFeatureToToggle(null);
   };
-  
+
   // Get feature description
   const getFeatureDescription = (feature) => {
     const descriptions = {
@@ -99,13 +99,13 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
       spatialAudio: "Experience 3D audio that adapts to your position and viewing environment. Works best with headphones.",
       dynamicAdaptation: "Automatically adapt content for different aspect ratios and devices using AI-powered scene analysis.",
       realTimeTranslation: "AI-powered real-time translation and voice synthesis for global content in multiple languages.",
-      lightFieldVideo: "Support for volumetric video that allows changing perspective after recording. Experimental format.",
+      lightFieldVideo: "Support for volumetric video that allows changing perspective after recording. Developed by zophlic.",
       neuralRendering: "AI-enhanced upscaling and frame interpolation for smoother playback of any content."
     };
-    
+
     return descriptions[feature] || "No description available.";
   };
-  
+
   // Get warning level for feature
   const getFeatureWarningLevel = (feature) => {
     const warningLevels = {
@@ -120,17 +120,17 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
       lightFieldVideo: "high",
       neuralRendering: "medium"
     };
-    
+
     return warningLevels[feature] || "low";
   };
-  
+
   return (
     <div className="experimental-features-container">
       <div className="experimental-header">
         <h2>Experimental Features</h2>
         <div className="experimental-badge">BETA</div>
       </div>
-      
+
       <div className="experimental-warning">
         <div className="warning-icon">⚠️</div>
         <p>
@@ -139,17 +139,17 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
           <span className="zophlic-signature">Curated by zophlic</span>
         </p>
       </div>
-      
+
       {showRestartNotice && (
         <div className="restart-notice">
           <p>Some changes will take effect after restarting the application.</p>
-          <button 
+          <button
             className="restart-btn"
             onClick={() => window.location.reload()}
           >
             Restart Now
           </button>
-          <button 
+          <button
             className="dismiss-btn"
             onClick={() => setShowRestartNotice(false)}
           >
@@ -157,7 +157,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
           </button>
         </div>
       )}
-      
+
       <div className="features-grid">
         <div className="features-category">
           <h3>Extended Reality</h3>
@@ -180,7 +180,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
               {getFeatureWarningLevel('extendedReality').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -201,7 +201,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="features-category">
           <h3>AI-Generated Content</h3>
           <div className="feature-item">
@@ -223,7 +223,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
               {getFeatureWarningLevel('aiGeneratedContent').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -243,7 +243,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
               {getFeatureWarningLevel('dynamicAdaptation').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -264,7 +264,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="features-category">
           <h3>Next-Gen Content Formats</h3>
           <div className="feature-item">
@@ -286,7 +286,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
               {getFeatureWarningLevel('nextGenFormats').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -306,7 +306,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
               {getFeatureWarningLevel('lightFieldVideo').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -327,7 +327,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="features-category">
           <h3>Advanced Security</h3>
           <div className="feature-item">
@@ -350,7 +350,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="features-category">
           <h3>Neural Enhancement</h3>
           <div className="feature-item">
@@ -374,30 +374,30 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
           </div>
         </div>
       </div>
-      
+
       {/* Confirmation Modal */}
       {showConfirmation && (
         <div className="confirmation-modal">
           <div className="confirmation-content">
             <h3>Enable Resource-Intensive Feature?</h3>
             <p>
-              This feature may significantly impact system performance, battery life, 
-              and device temperature. It requires substantial computational resources 
+              This feature may significantly impact system performance, battery life,
+              and device temperature. It requires substantial computational resources
               and may not work well on all devices.
             </p>
             <p>
-              <strong>Feature:</strong> {featureToToggle && 
+              <strong>Feature:</strong> {featureToToggle &&
                 featureToToggle.replace(/([A-Z])/g, ' $1')
                 .replace(/^./, str => str.toUpperCase())}
             </p>
             <div className="confirmation-actions">
-              <button 
+              <button
                 className="cancel-btn"
                 onClick={cancelEnableFeature}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="confirm-btn"
                 onClick={confirmEnableFeature}
               >
@@ -407,7 +407,7 @@ const ExperimentalFeatures = ({ preferences, updatePreferences }) => {
           </div>
         </div>
       )}
-      
+
       <div className="telemetry-notice">
         <p>
           Usage data for experimental features is collected to help improve them.

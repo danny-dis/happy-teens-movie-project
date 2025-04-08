@@ -33,6 +33,8 @@ Filo is a revolutionary, fully decentralized streaming platform that operates wi
 - **Distributed Redundancy**: Content is automatically replicated across the network
 - **Geographic Optimization**: Connect to nearby peers for lower latency
 - **Incentivized Participation**: Token system rewards content sharing and network participation
+- **Mesh Network Support**: Allow content sharing over local mesh networks when internet is unavailable
+- **Decentralized Computation**: Distribute intensive processing tasks across the peer network
 
 ### User Experience
 - **Intuitive Interface**: Beautiful, responsive design that works across devices
@@ -41,6 +43,13 @@ Filo is a revolutionary, fully decentralized streaming platform that operates wi
 - **Privacy Controls**: Fine-grained control over what you share and with whom
 - **Personal Library**: Organize and manage your downloaded content
 - **Content Discovery**: Find new content through distributed recommendation system
+
+### Experimental Features
+- **Federated Learning**: Train recommendation models across the network without sharing personal data
+- **Homomorphic Encryption**: Perform operations on encrypted data without decrypting it
+- **Light Field Video**: Support for volumetric video that allows changing perspective after recording
+- **Quantum-Resistant Cryptography**: Future-proof security against quantum computing attacks
+- **Neural Rendering**: AI-enhanced upscaling and frame interpolation for smoother playback
 
 ## 🚀 Getting Started
 
@@ -118,6 +127,19 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## 🧪 Experimental Features
+
+Filo includes several cutting-edge experimental features that can be enabled in the settings:
+
+- **Federated Learning**: Train recommendation models across the network without sharing personal data
+- **Mesh Network Support**: Allow content sharing over local mesh networks when internet is unavailable
+- **Homomorphic Encryption**: Perform operations on encrypted data without decrypting it, enhancing privacy
+- **Decentralized Computation**: Distribute intensive processing tasks across the peer network
+- **Light Field Video**: Support for volumetric video that allows changing perspective after recording (developed by zophlic)
+- **Quantum-Resistant Cryptography**: Implement future-proof cryptography designed to withstand quantum computing attacks
+- **Neural Rendering**: AI-enhanced upscaling and frame interpolation for smoother playback
+- **Extended Reality**: VR cinema experience and AR content overlays in a fully decentralized environment
+
 ## 🔮 Future Roadmap
 
 - **WebAssembly Acceleration**: Port performance-critical code to WASM for 2-3x speed improvements
@@ -126,8 +148,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Zero-Knowledge Privacy Framework**: Enhanced privacy-preserving content sharing
 - **Distributed Edge Acceleration**: Edge node integration for improved performance
 - **Real-Time Collaborative Viewing**: Synchronized playback with chat functionality
-- **Quantum-Resistant Security**: Future-proof encryption algorithms
 
 ---
 
-*Filo - True decentralization for content streaming. Developed with ❤️ by zophlic.*
+*Filo - True decentralization for content streaming. Developed with ❤️ by zophlic. All experimental features curated and implemented by zophlic.*

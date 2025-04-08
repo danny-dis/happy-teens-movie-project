@@ -6,6 +6,13 @@ import ExperimentalFeatures from './ExperimentalFeatures';
 import './App.css';
 import './zophlic.css';
 
+// Experimental services
+import federatedLearningService from '../services/federatedLearningService';
+import meshNetworkService from '../services/meshNetworkService';
+import decentralizedComputationService from '../services/decentralizedComputationService';
+import lightFieldVideoService from '../services/lightFieldVideoService';
+import homomorphicEncryption from '../crypto/homomorphicEncryption';
+
 /**
  * Main Filo Application Component
  *
@@ -39,6 +46,41 @@ function App() {
         setLoading(true);
         await app.initialize();
         setInitialized(true);
+
+        // Initialize experimental services if enabled
+        if (app.state.experimentalFeatures) {
+          const { experimentalFeatures } = app.state;
+
+          // Initialize Federated Learning
+          if (experimentalFeatures.federatedLearning) {
+            console.log('Initializing Federated Learning service...');
+            await federatedLearningService.initialize();
+          }
+
+          // Initialize Mesh Network
+          if (experimentalFeatures.meshNetworkSupport) {
+            console.log('Initializing Mesh Network service...');
+            await meshNetworkService.initialize();
+          }
+
+          // Initialize Decentralized Computation
+          if (experimentalFeatures.decentralizedComputation) {
+            console.log('Initializing Decentralized Computation service...');
+            await decentralizedComputationService.initialize();
+          }
+
+          // Initialize Light Field Video
+          if (experimentalFeatures.lightFieldVideo) {
+            console.log('Initializing Light Field Video service...');
+            await lightFieldVideoService.initialize();
+          }
+
+          // Initialize Homomorphic Encryption
+          if (experimentalFeatures.homomorphicEncryption) {
+            console.log('Initializing Homomorphic Encryption service...');
+            await homomorphicEncryption.initialize();
+          }
+        }
 
         // Subscribe to app state changes
         const unsubscribe = app.subscribeToState(newState => {

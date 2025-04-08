@@ -47,6 +47,13 @@ For a fully decentralized alternative with no central servers, check out our sis
 - **Social Integration**: Share activity on social platforms
 - **Rating System**: Rate and review content
 
+### Experimental Features
+- **Extended Reality**: VR cinema experience and AR content overlays
+- **AI-Generated Content**: Personalized recaps, custom trailers, and content summarization
+- **Light Field Video**: Support for volumetric video with perspective manipulation
+- **Quantum-Resistant Cryptography**: Future-proof security against quantum computing attacks
+- **Neural Rendering**: AI-enhanced upscaling and frame interpolation for smoother playback
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -195,6 +202,21 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## 🧪 Experimental Features
+
+Movo includes several cutting-edge experimental features that can be enabled in the settings:
+
+- **Extended Reality**: VR cinema experience, AR content overlays, and spatial audio features
+- **AI-Generated Content**: Personalized recaps, custom trailer creation, and content summarization
+- **Next-Gen Content Formats**: Support for 8K HDR, high frame rate content, and advanced color spaces
+- **Quantum-Resistant Cryptography**: Future-proof encryption algorithms designed to withstand quantum computing attacks
+- **Neural Enhancement**: Real-time video quality enhancement, upscaling, and color grading
+- **Spatial Audio**: 3D audio that adapts to your position and viewing environment
+- **Dynamic Adaptation**: AI-powered content adaptation for different aspect ratios and devices
+- **Real-Time Translation**: AI-powered translation and voice synthesis for global content
+- **Light Field Video**: Volumetric video that allows changing perspective after recording (developed by zophlic)
+- **Neural Rendering**: AI-enhanced upscaling and frame interpolation for smoother playback
+
 ## 🔮 Future Roadmap
 
 - **WebAssembly Acceleration**: Port performance-critical code to WASM for 2-3x speed improvements
@@ -203,7 +225,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Zero-Knowledge Privacy Framework**: Enhanced privacy-preserving content sharing
 - **Distributed Edge Acceleration**: Edge node integration for improved performance
 - **Real-Time Collaborative Viewing**: Synchronized playback with chat functionality
-- **Quantum-Resistant Security**: Future-proof encryption algorithms
 
 ## 📞 Contact
 
@@ -211,4 +232,4 @@ For questions or support, please open an issue in the GitHub repository or conta
 
 ---
 
-*Movo - Bringing the future of streaming to your devices today. Developed with ❤️ by zophlic. © 2023 zophlic*
+*Movo - Bringing the future of streaming to your devices today. Developed with ❤️ by zophlic. All experimental features curated and implemented by zophlic. © 2023 zophlic*

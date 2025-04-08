@@ -3,17 +3,17 @@ import './ExperimentalFeatures.css';
 
 /**
  * Experimental Features Component for Filo
- * 
+ *
  * Provides toggles for cutting-edge experimental features that are still in development.
  * Focused on decentralized technologies and advanced P2P capabilities.
- * 
+ *
  * @author zophlic
  */
 const ExperimentalFeatures = ({ app }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [featureToToggle, setFeatureToToggle] = useState(null);
   const [showRestartNotice, setShowRestartNotice] = useState(false);
-  
+
   // Initialize experimental features from app state or defaults
   const [experimentalFeatures, setExperimentalFeatures] = useState(
     app.state.experimentalFeatures || {
@@ -31,45 +31,45 @@ const ExperimentalFeatures = ({ app }) => {
       federatedLearning: false
     }
   );
-  
+
   // Update app state when features change
   useEffect(() => {
     if (app && app.updateState) {
       app.updateState({
         experimentalFeatures
       });
-      
+
       // Check if any features were enabled that require restart
       const restartFeatures = [
-        'quantumResistantCrypto', 
-        'nextGenFormats', 
+        'quantumResistantCrypto',
+        'nextGenFormats',
         'extendedReality',
         'homomorphicEncryption',
         'meshNetworkSupport'
       ];
-      
-      const needsRestart = restartFeatures.some(feature => 
+
+      const needsRestart = restartFeatures.some(feature =>
         experimentalFeatures[feature] !== (app.state.experimentalFeatures?.[feature] || false)
       );
-      
+
       if (needsRestart) {
         setShowRestartNotice(true);
       }
     }
   }, [experimentalFeatures, app]);
-  
+
   // Handle toggle with confirmation for resource-intensive features
   const handleToggleFeature = (feature) => {
     // Features that need confirmation before enabling
     const intensiveFeatures = [
-      'extendedReality', 
-      'nextGenFormats', 
-      'neuralRendering', 
+      'extendedReality',
+      'nextGenFormats',
+      'neuralRendering',
       'lightFieldVideo',
       'decentralizedComputation',
       'homomorphicEncryption'
     ];
-    
+
     if (intensiveFeatures.includes(feature) && !experimentalFeatures[feature]) {
       setFeatureToToggle(feature);
       setShowConfirmation(true);
@@ -81,7 +81,7 @@ const ExperimentalFeatures = ({ app }) => {
       });
     }
   };
-  
+
   // Confirm enabling resource-intensive feature
   const confirmEnableFeature = () => {
     if (featureToToggle) {
@@ -93,13 +93,13 @@ const ExperimentalFeatures = ({ app }) => {
       setFeatureToToggle(null);
     }
   };
-  
+
   // Cancel enabling resource-intensive feature
   const cancelEnableFeature = () => {
     setShowConfirmation(false);
     setFeatureToToggle(null);
   };
-  
+
   // Get feature description
   const getFeatureDescription = (feature) => {
     const descriptions = {
@@ -111,15 +111,15 @@ const ExperimentalFeatures = ({ app }) => {
       homomorphicEncryption: "Perform operations on encrypted data without decrypting it, enhancing privacy.",
       neuralEnhancement: "Use distributed neural networks to enhance video quality and upscale resolution.",
       spatialAudio: "Experience 3D audio that adapts to your position in VR/AR environments.",
-      lightFieldVideo: "Support for volumetric video that allows changing perspective after recording.",
+      lightFieldVideo: "Support for volumetric video that allows changing perspective after recording. Developed by zophlic.",
       neuralRendering: "AI-enhanced upscaling and frame interpolation for smoother playback.",
       meshNetworkSupport: "Allow content sharing over local mesh networks when internet is unavailable.",
       federatedLearning: "Train recommendation models across the network without sharing personal data."
     };
-    
+
     return descriptions[feature] || "No description available.";
   };
-  
+
   // Get warning level for feature
   const getFeatureWarningLevel = (feature) => {
     const warningLevels = {
@@ -136,17 +136,17 @@ const ExperimentalFeatures = ({ app }) => {
       meshNetworkSupport: "medium",
       federatedLearning: "medium"
     };
-    
+
     return warningLevels[feature] || "low";
   };
-  
+
   return (
     <div className="experimental-features-container">
       <div className="experimental-header">
         <h2>Experimental Features</h2>
         <div className="experimental-badge">ALPHA</div>
       </div>
-      
+
       <div className="experimental-warning">
         <div className="warning-icon">⚠️</div>
         <p>
@@ -155,17 +155,17 @@ const ExperimentalFeatures = ({ app }) => {
           <span className="zophlic-signature">Curated by zophlic</span>
         </p>
       </div>
-      
+
       {showRestartNotice && (
         <div className="restart-notice">
           <p>Some changes will take effect after restarting the application.</p>
-          <button 
+          <button
             className="restart-btn"
             onClick={() => window.location.reload()}
           >
             Restart Now
           </button>
-          <button 
+          <button
             className="dismiss-btn"
             onClick={() => setShowRestartNotice(false)}
           >
@@ -173,7 +173,7 @@ const ExperimentalFeatures = ({ app }) => {
           </button>
         </div>
       )}
-      
+
       <div className="features-grid">
         <div className="features-category">
           <h3>Extended Reality</h3>
@@ -196,7 +196,7 @@ const ExperimentalFeatures = ({ app }) => {
               {getFeatureWarningLevel('extendedReality').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -217,7 +217,7 @@ const ExperimentalFeatures = ({ app }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="features-category">
           <h3>Distributed AI</h3>
           <div className="feature-item">
@@ -239,7 +239,7 @@ const ExperimentalFeatures = ({ app }) => {
               {getFeatureWarningLevel('aiGeneratedContent').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -259,7 +259,7 @@ const ExperimentalFeatures = ({ app }) => {
               {getFeatureWarningLevel('federatedLearning').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -280,7 +280,7 @@ const ExperimentalFeatures = ({ app }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="features-category">
           <h3>Next-Gen Content Formats</h3>
           <div className="feature-item">
@@ -302,7 +302,7 @@ const ExperimentalFeatures = ({ app }) => {
               {getFeatureWarningLevel('nextGenFormats').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -322,7 +322,7 @@ const ExperimentalFeatures = ({ app }) => {
               {getFeatureWarningLevel('lightFieldVideo').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -343,7 +343,7 @@ const ExperimentalFeatures = ({ app }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="features-category">
           <h3>Advanced Security</h3>
           <div className="feature-item">
@@ -365,7 +365,7 @@ const ExperimentalFeatures = ({ app }) => {
               {getFeatureWarningLevel('quantumResistantCrypto').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -386,7 +386,7 @@ const ExperimentalFeatures = ({ app }) => {
             </div>
           </div>
         </div>
-        
+
         <div className="features-category">
           <h3>Advanced P2P</h3>
           <div className="feature-item">
@@ -408,7 +408,7 @@ const ExperimentalFeatures = ({ app }) => {
               {getFeatureWarningLevel('decentralizedComputation').toUpperCase()}
             </div>
           </div>
-          
+
           <div className="feature-item">
             <div className="feature-info">
               <label className="feature-toggle">
@@ -430,30 +430,30 @@ const ExperimentalFeatures = ({ app }) => {
           </div>
         </div>
       </div>
-      
+
       {/* Confirmation Modal */}
       {showConfirmation && (
         <div className="confirmation-modal">
           <div className="confirmation-content">
             <h3>Enable Resource-Intensive Feature?</h3>
             <p>
-              This feature may significantly impact system performance, battery life, 
-              and device temperature. It requires substantial computational resources 
+              This feature may significantly impact system performance, battery life,
+              and device temperature. It requires substantial computational resources
               and may not work well on all devices.
             </p>
             <p>
-              <strong>Feature:</strong> {featureToToggle && 
+              <strong>Feature:</strong> {featureToToggle &&
                 featureToToggle.replace(/([A-Z])/g, ' $1')
                 .replace(/^./, str => str.toUpperCase())}
             </p>
             <div className="confirmation-actions">
-              <button 
+              <button
                 className="cancel-btn"
                 onClick={cancelEnableFeature}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="confirm-btn"
                 onClick={confirmEnableFeature}
               >
@@ -463,7 +463,7 @@ const ExperimentalFeatures = ({ app }) => {
           </div>
         </div>
       )}
-      
+
       <div className="telemetry-notice">
         <p>
           Usage data for experimental features is stored locally only and never shared with any central servers.
