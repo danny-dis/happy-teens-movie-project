@@ -13,13 +13,21 @@
  * @author zophlic
  */
 
+// Import optimizations
+import { createWebGLRenderer } from '../renderers/webgl-renderer';
+import { compressDepthMap, decompressDepthMap, optimizeDepthMap, restoreDepthMap } from '../utils/data-compression';
+import { resourceManager } from '../utils/resource-awareness';
+import { performanceMonitor, qualityOptimizer } from '../utils/performance-monitor';
+
 class LightFieldVideoService {
   constructor() {
     this.initialized = false;
     this.renderer = null;
+    this.webGLRenderer = null;
     this.currentVideo = null;
     this.viewpoint = { x: 0, y: 0, z: 0 };
     this.depthMap = null;
+    this.optimizedDepthMap = null;
     this.canvas = null;
     this.ctx = null;
     this.worker = null;
@@ -30,15 +38,131 @@ class LightFieldVideoService {
       depthResolution: 'medium', // 'low', 'medium', 'high'
       useGPU: true, // Use GPU acceleration if available
       prefetchDistance: 2, // Prefetch frames within this distance
-      renderScale: 1.0 // Scale factor for rendering resolution
+      renderScale: 1.0, // Scale factor for rendering resolution
+      adaptiveQuality: true, // Automatically adjust quality based on performance
+      adaptiveFrameRate: true, // Automatically adjust frame rate based on performance
+      powerSaveMode: false, // Reduce quality to save power
+      useCompression: true, // Use data compression for better memory usage
+      useWebGL: true // Use WebGL rendering when available
     };
     this.stats = {
       framesRendered: 0,
       averageRenderTime: 0,
       viewpointChanges: 0,
-      dataTransferred: 0
+      dataTransferred: 0,
+      frameSkips: 0,
+      qualityChanges: 0,
+      memoryUsage: 0
     };
     this.eventListeners = {};
+
+    // Initialize optimization utilities
+    this._initOptimizationUtilities();
+  }
+
+  /**
+   * Initialize optimization utilities
+   * @private
+   */
+  _initOptimizationUtilities() {
+    // Initialize performance monitor
+    if (!performanceMonitor.isInitialized) {
+      performanceMonitor.initialize({
+        targetFps: 60,
+        autoStartMonitoring: true
+      });
+
+      // Listen for performance updates
+      performanceMonitor.addListener(metrics => {
+        // Update stats
+        this.stats.averageRenderTime = metrics.frameTime.average;
+
+        // Log performance issues
+        if (metrics.frameTime.isCritical) {
+          console.warn('Critical performance issue detected:', metrics);
+        }
+      });
+    }
+
+    // Initialize quality optimizer
+    if (!qualityOptimizer.isInitialized) {
+      qualityOptimizer.initialize({
+        initialQuality: this.settings.quality,
+        initialRenderScale: this.settings.renderScale,
+        autoStartOptimization: this.settings.adaptiveQuality
+      });
+
+      // Listen for quality changes
+      qualityOptimizer.addListener(qualitySettings => {
+        // Update settings
+        if (this.settings.adaptiveQuality) {
+          const oldQuality = this.settings.quality;
+          const oldRenderScale = this.settings.renderScale;
+
+          this.settings.quality = qualitySettings.quality;
+          this.settings.renderScale = qualitySettings.renderScale;
+
+          // Track quality changes
+          if (oldQuality !== qualitySettings.quality ||
+              Math.abs(oldRenderScale - qualitySettings.renderScale) >= 0.1) {
+            this.stats.qualityChanges++;
+
+            // Trigger event
+            this._triggerEvent('qualityChanged', {
+              quality: qualitySettings.quality,
+              renderScale: qualitySettings.renderScale,
+              automatic: true
+            });
+
+            // Update canvas size if needed
+            if (this.canvas && this.canvas.parentNode &&
+                Math.abs(oldRenderScale - qualitySettings.renderScale) >= 0.1) {
+              this._resizeCanvas(this.canvas.parentNode);
+            }
+          }
+        }
+      });
+    }
+
+    // Initialize resource manager
+    if (!resourceManager.isInitialized) {
+      resourceManager.initialize().then(success => {
+        if (success) {
+          // Listen for resource state changes
+          resourceManager.addListener(state => {
+            // Update power save mode
+            if (state.powerSaveMode !== this.settings.powerSaveMode) {
+              this.settings.powerSaveMode = state.powerSaveMode;
+
+              console.log(`Power save mode ${state.powerSaveMode ? 'enabled' : 'disabled'}`);
+
+              // Adjust quality if needed
+              if (state.powerSaveMode && this.settings.quality !== 'low') {
+                this.setQuality('low');
+              }
+            }
+
+            // Pause playback if battery is critical and not charging
+            if (state.battery && state.battery.isCritical && !state.battery.charging && this.isPlaying) {
+              console.warn('Battery critical, pausing playback to save power');
+              this.pause();
+
+              // Trigger event
+              this._triggerEvent('powerSaveActivated', {
+                reason: 'critical_battery',
+                batteryLevel: state.battery.level
+              });
+            }
+
+            // Pause heavy processing if page is not visible
+            if (!state.visibility && this.isPlaying && this.settings.adaptiveFrameRate) {
+              // Reduce frame rate when not visible
+              this._reduceFrameRateWhenHidden();
+            }
+          });
+        }
+      });
+    }
   }
 
   /**
@@ -731,8 +855,74 @@ class LightFieldVideoService {
   async _initializeRenderer() {
     console.log('Initializing light field renderer...');
 
-    // In a real implementation, this would initialize a WebGL renderer
-    // For now, we'll create a simple renderer optimized for performance
+    // Try to initialize WebGL renderer if enabled
+    if (this.settings.useWebGL && this.settings.useGPU) {
+      this.webGLRenderer = createWebGLRenderer(this.canvas);
+
+      if (this.webGLRenderer) {
+        console.log('Using WebGL renderer for better performance');
+
+        // Create a wrapper renderer that uses WebGL
+        this.renderer = {
+          canvas: this.canvas,
+          ctx: this.ctx,
+          useGPU: true,
+          quality: this.settings.quality,
+
+          // Render function that uses WebGL
+          renderFrame: (frameData, viewpoint, depthMap) => {
+            // Skip if canvas is not visible
+            if (document.hidden) return 0;
+
+            // Start timing
+            const startTime = performance.now();
+
+            // Create a temporary canvas for the frame content
+            if (!this._tempCanvas) {
+              this._tempCanvas = document.createElement('canvas');
+              this._tempCanvas.width = this.canvas.width;
+              this._tempCanvas.height = this.canvas.height;
+              this._tempCtx = this._tempCanvas.getContext('2d');
+            }
+
+            // Update temp canvas size if needed
+            if (this._tempCanvas.width !== this.canvas.width || this._tempCanvas.height !== this.canvas.height) {
+              this._tempCanvas.width = this.canvas.width;
+              this._tempCanvas.height = this.canvas.height;
+            }
+
+            // Draw content to temp canvas
+            this._drawSimulatedContent(frameData, this._tempCtx);
+
+            // Update WebGL texture with the canvas content
+            this.webGLRenderer.updateTexture(this._tempCanvas);
+
+            // Update depth texture if available
+            if (depthMap) {
+              // Use optimized depth map if available
+              const depthMapToUse = this.optimizedDepthMap || depthMap;
+              this.webGLRenderer.updateDepthTexture(depthMapToUse);
+            }
+
+            // Render with WebGL
+            const renderTime = this.webGLRenderer.renderFrame(frameData, viewpoint, depthMap);
+
+            // Record performance
+            performanceMonitor.recordFrameTime(renderTime);
+
+            return renderTime;
+          }
+        };
+
+        return;
+      } else {
+        console.warn('WebGL not supported or initialization failed, falling back to Canvas 2D');
+        this.settings.useWebGL = false;
+      }
+    }
+
+    // Fallback to Canvas 2D renderer
+    console.log('Using Canvas 2D renderer');
 
     // Pre-calculate half width and height for better performance
     const updateDimensions = () => {
@@ -743,7 +933,7 @@ class LightFieldVideoService {
     // Initial dimensions
     updateDimensions();
 
-    // Create a more efficient renderer
+    // Create a more efficient Canvas 2D renderer
     this.renderer = {
       canvas: this.canvas,
       ctx: this.ctx,
@@ -801,7 +991,12 @@ class LightFieldVideoService {
         }
 
         // Calculate render time
-        return performance.now() - startTime;
+        const renderTime = performance.now() - startTime;
+
+        // Record performance
+        performanceMonitor.recordFrameTime(renderTime);
+
+        return renderTime;
       }
     };
   }
@@ -946,7 +1141,8 @@ class LightFieldVideoService {
   async _loadDepthMap(videoId) {
     console.log(`Loading depth map for video ${videoId}...`);
 
-    // Skip artificial delay for better performance
+    // Start performance measurement
+    performanceMonitor.mark('depth-map-load-start');
 
     // Generate a simple depth map with reduced resolution
     const { width, height } = this.currentVideo.dimensions;
@@ -999,6 +1195,37 @@ class LightFieldVideoService {
 
     // Update stats with reduced data size
     this.stats.dataTransferred += depthWidth * depthHeight * 4; // 4 bytes per float
+
+    // Optimize depth map if compression is enabled
+    if (this.settings.useCompression) {
+      // Optimize with appropriate settings based on quality
+      const optimizationOptions = {
+        downsample: this.settings.quality !== 'high',
+        downsampleFactor: this.settings.quality === 'low' ? 2 : 1,
+        quantize: true,
+        quantizeLevels: this.settings.quality === 'low' ? 64 : 256,
+        compress: this.settings.quality !== 'high'
+      };
+
+      // Optimize depth map
+      this.optimizedDepthMap = optimizeDepthMap(depthMap, optimizationOptions);
+
+      // Log compression stats
+      if (this.optimizedDepthMap.compressedSize) {
+        const compressionRatio = this.optimizedDepthMap.originalSize / this.optimizedDepthMap.compressedSize;
+        console.log(`Depth map compressed: ${compressionRatio.toFixed(2)}x reduction`);
+
+        // Update stats
+        this.stats.memoryUsage = this.optimizedDepthMap.compressedSize;
+      }
+    } else {
+      this.optimizedDepthMap = null;
+    }
+
+    // End performance measurement
+    performanceMonitor.mark('depth-map-load-end');
+    const loadTime = performanceMonitor.measure('depth-map-load', 'depth-map-load-start', 'depth-map-load-end');
+    console.log(`Depth map loaded in ${loadTime}ms`);
 
     return depthMap;
   }
@@ -1584,6 +1811,94 @@ class LightFieldVideoService {
         console.error(`Error in event listener for ${event}:`, error);
       }
     }
+  }
+
+  /**
+   * Set quality level
+   * @param {string} quality - Quality level ('low', 'medium', 'high')
+   * @param {number} renderScale - Optional render scale (0.5-1.0)
+   * @returns {boolean} Success status
+   */
+  setQuality(quality, renderScale) {
+    if (!['low', 'medium', 'high'].includes(quality)) {
+      console.error(`Invalid quality level: ${quality}`);
+      return false;
+    }
+
+    // Validate render scale if provided
+    if (renderScale !== undefined) {
+      if (renderScale < 0.5 || renderScale > 1.0) {
+        console.error(`Invalid render scale: ${renderScale}`);
+        return false;
+      }
+    } else {
+      // Default render scales based on quality
+      renderScale = quality === 'low' ? 0.5 : (quality === 'medium' ? 0.75 : 1.0);
+    }
+
+    console.log(`Setting quality to ${quality} (scale: ${renderScale.toFixed(2)})`);
+
+    const oldQuality = this.settings.quality;
+    const oldRenderScale = this.settings.renderScale;
+
+    // Update settings
+    this.settings.quality = quality;
+    this.settings.renderScale = renderScale;
+
+    // Update quality optimizer if adaptive quality is enabled
+    if (this.settings.adaptiveQuality && qualityOptimizer.isInitialized) {
+      qualityOptimizer.setQuality(quality, renderScale);
+    }
+
+    // Resize canvas if needed
+    if (this.canvas && this.canvas.parentNode &&
+        Math.abs(oldRenderScale - renderScale) >= 0.1) {
+      this._resizeCanvas(this.canvas.parentNode);
+    }
+
+    // Trigger event
+    this._triggerEvent('qualityChanged', {
+      quality,
+      renderScale,
+      automatic: false
+    });
+
+    return true;
+  }
+
+  /**
+   * Reduce frame rate when page is hidden
+   * @private
+   */
+  _reduceFrameRateWhenHidden() {
+    if (!this.isPlaying || !this.settings.adaptiveFrameRate) return;
+
+    // Store original frame rate if not already stored
+    if (!this._originalFrameRate) {
+      this._originalFrameRate = this.currentVideo.framerate;
+    }
+
+    // Reduce frame rate to 5fps when hidden
+    this.currentVideo.framerate = 5;
+
+    console.log('Page hidden, reducing frame rate to 5fps');
+
+    // Set up listener to restore frame rate when page becomes visible again
+    const visibilityListener = (isVisible) => {
+      if (isVisible && this._originalFrameRate) {
+        // Restore original frame rate
+        this.currentVideo.framerate = this._originalFrameRate;
+        this._originalFrameRate = null;
+
+        console.log(`Page visible, restoring frame rate to ${this.currentVideo.framerate}fps`);
+
+        // Remove listener
+        resourceManager.visibilityMonitor.removeListener(visibilityListener);
+      }
+    };
+
+    // Add listener
+    resourceManager.visibilityMonitor.addListener(visibilityListener);
   }
 }
 
