@@ -11,6 +11,10 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.9.0",
     "react-scripts": "5.0.1",
+    "recharts": "^2.5.0",
+    "uuid": "^9.0.0",
+    "webtorrent": "^2.0.0",
+    "simple-peer": "^9.11.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

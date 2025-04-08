@@ -1,10 +1,13 @@
 const express = require("express");
 const mysql = require("mysql");
 const app = express();
-const cors = require('cors')
+const cors = require('cors');
+const path = require('path');
 
-// Import the usersRouter and userControllers
+// Import routers and controllers
 const usersRouter = require("./routes/userRouter.js");
+const movieRouter = require("./routes/movieRouter.js");
+const scanRouter = require("./routes/scanRouter.js");
 const { registerUser, loginUser } = require("./controllers/userController.js");
 
 // Parse incoming JSON data
@@ -19,14 +22,17 @@ const db = mysql.createConnection({
   database: "happyteens",
 });
 
-// Define a route to handle registration
-app.post("/register", registerUser);
+// Serve static files (for downloaded movie posters)
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
-// Define a route to handle login
+// Define authentication routes
+app.post("/register", registerUser);
 app.post("/login", loginUser);
 
-// Mount the usersRouter
+// Mount the routers
 app.use("/", usersRouter);
+app.use("/api", movieRouter);
+app.use("/api/scan", scanRouter);
 
 // Start the server
 const port = process.env.PORT || 5000;

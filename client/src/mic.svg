@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Microphone</title>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Microphone" fill="#FFFFFF" fill-rule="nonzero">
+            <path d="M12,16 C14.2091,16 16,14.2091 16,12 L16,4 C16,1.79086 14.2091,0 12,0 C9.79086,0 8,1.79086 8,4 L8,12 C8,14.2091 9.79086,16 12,16 Z" id="Path"></path>
+            <path d="M6,12 C6,15.3137 8.68629,18 12,18 C15.3137,18 18,15.3137 18,12 L20,12 C20,16.4183 16.4183,20 12,20 C7.58172,20 4,16.4183 4,12 L6,12 Z" id="Path"></path>
+            <path d="M11,22 L13,22 L13,24 L11,24 L11,22 Z" id="Path"></path>
+        </g>
+    </g>
+</svg>
