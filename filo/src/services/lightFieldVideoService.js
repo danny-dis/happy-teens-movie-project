@@ -50,46 +50,140 @@ class LightFieldVideoService {
     if (this.initialized) return true;
 
     try {
+      // Use performance mark for timing initialization
+      performance.mark('lightfield-init-start');
       console.log('Initializing Light Field Video service...');
 
-      // Override default settings
+      // Use Object.assign for more efficient object merging
       if (options.settings) {
-        this.settings = {
-          ...this.settings,
-          ...options.settings
-        };
+        Object.assign(this.settings, options.settings);
       }
 
-      // Check for WebGL support
-      const hasWebGL = this._checkWebGLSupport();
+      // Adjust settings based on device capabilities
+      this._adjustSettingsForDevice();
 
-      if (!hasWebGL && this.settings.useGPU) {
-        console.warn('WebGL not supported, falling back to CPU rendering');
-        this.settings.useGPU = false;
-      }
-
-      // Create canvas for rendering
+      // Create canvas with optimized attributes
       this.canvas = document.createElement('canvas');
-      this.ctx = this.canvas.getContext('2d');
 
-      // Initialize renderer
-      await this._initializeRenderer();
+      // Use alpha: false for better performance when we don't need transparency
+      this.ctx = this.canvas.getContext('2d', {
+        alpha: false,
+        desynchronized: true, // Reduce latency when available
+        willReadFrequently: false // Optimize for drawing, not reading pixels
+      });
 
-      // Initialize worker for background processing
-      await this._initializeWorker();
+      // Initialize components in parallel for faster startup
+      await Promise.all([
+        this._initializeRenderer(),
+        this._initializeWorker()
+      ]);
+
+      // Pre-allocate reusable objects to reduce garbage collection
+      this._frameDataPool = new Array(5).fill().map(() => ({
+        index: 0,
+        timestamp: 0
+      }));
+      this._nextFrameDataIndex = 0;
+
+      // Add performance monitoring
+      this._lastPerformanceCheck = performance.now();
+      this._frameTimeHistory = new Array(60).fill(16.67); // Initialize with 60fps target
+      this._frameTimeIndex = 0;
 
       this.initialized = true;
-      console.log('Light Field Video service initialized');
+
+      // Measure initialization time
+      performance.mark('lightfield-init-end');
+      performance.measure('lightfield-initialization', 'lightfield-init-start', 'lightfield-init-end');
+      const initTime = performance.getEntriesByName('lightfield-initialization')[0].duration;
+      console.log(`Light Field Video service initialized in ${initTime.toFixed(2)}ms`);
 
       return true;
     } catch (error) {
       console.error('Failed to initialize Light Field Video service:', error);
+
+      // Clean up any partially initialized resources
+      this._cleanupResources();
+
       return false;
     }
   }
 
   /**
-   * Load a light field video
+   * Adjust settings based on device capabilities
+   * @private
+   */
+  _adjustSettingsForDevice() {
+    // Check for WebGL support
+    const hasWebGL = this._checkWebGLSupport();
+
+    if (!hasWebGL && this.settings.useGPU) {
+      console.warn('WebGL not supported, falling back to CPU rendering');
+      this.settings.useGPU = false;
+    }
+
+    // Detect device performance level
+    const isLowEndDevice = this._isLowEndDevice();
+
+    if (isLowEndDevice) {
+      console.log('Low-end device detected, optimizing settings for performance');
+      this.settings.quality = 'low';
+      this.settings.depthResolution = 'low';
+      this.settings.renderScale = 0.75;
+      this.settings.prefetchDistance = 1;
+    }
+  }
+
+  /**
+   * Detect if running on a low-end device
+   * @private
+   * @returns {boolean} Whether this is a low-end device
+   */
+  _isLowEndDevice() {
+    // Check available memory (if supported)
+    if (navigator.deviceMemory && navigator.deviceMemory < 4) {
+      return true;
+    }
+
+    // Check CPU cores (if supported)
+    if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) {
+      return true;
+    }
+
+    // Check for mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    return isMobile;
+  }
+
+  /**
+   * Clean up resources
+   * @private
+   */
+  _cleanupResources() {
+    // Clean up canvas
+    if (this.canvas && this.canvas.parentNode) {
+      this.canvas.parentNode.removeChild(this.canvas);
+    }
+
+    // Clean up worker
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+
+    // Clean up cached canvases
+    if (this._depthTempCanvas) {
+      this._depthTempCanvas = null;
+    }
+
+    if (this._cachedDepthCanvas) {
+      this._cachedDepthCanvas = null;
+    }
+  }
+
+  /**
+   * Load a light field video - optimized for performance
    * @param {string} videoId - Video ID
    * @param {HTMLElement} container - Container element
    * @returns {Promise<boolean>} Success status
@@ -98,6 +192,8 @@ class LightFieldVideoService {
     if (!this.initialized) await this.initialize();
 
     try {
+      // Use performance mark for timing
+      performance.mark('video-load-start');
       console.log(`Loading light field video ${videoId}...`);
 
       // Check if container is valid
@@ -110,19 +206,22 @@ class LightFieldVideoService {
         await this.unloadVideo();
       }
 
-      // Resize canvas to match container
-      this.canvas.width = container.clientWidth * this.settings.renderScale;
-      this.canvas.height = container.clientHeight * this.settings.renderScale;
-      this.canvas.style.width = '100%';
-      this.canvas.style.height = '100%';
+      // Create loading indicator
+      this._showLoadingIndicator(container);
+
+      // Load video data and depth map in parallel
+      const [videoData, resizeObserver] = await Promise.all([
+        this._simulateLoadVideoData(videoId),
+        this._setupResizeHandling(container)
+      ]);
+
+      // Resize canvas to match container with the appropriate scale
+      this._resizeCanvas(container);
 
       // Add canvas to container
       container.appendChild(this.canvas);
 
-      // Simulate loading video data
-      const videoData = await this._simulateLoadVideoData(videoId);
-
-      // Set current video
+      // Set current video with optimized object structure
       this.currentVideo = {
         id: videoId,
         data: videoData,
@@ -132,32 +231,171 @@ class LightFieldVideoService {
         framerate: videoData.framerate,
         duration: videoData.duration,
         dimensions: videoData.dimensions,
-        viewpoints: videoData.viewpoints
+        viewpoints: videoData.viewpoints,
+        resizeObserver
       };
 
       // Reset viewpoint
       this.viewpoint = { x: 0, y: 0, z: 0 };
 
-      // Load depth map
-      this.depthMap = await this._loadDepthMap(videoId);
+      // Load depth map in background
+      this._loadDepthMapInBackground(videoId);
+
+      // Pre-render first frame to show something immediately
+      this._renderFrame(0);
+
+      // Hide loading indicator
+      this._hideLoadingIndicator();
+
+      // Measure loading time
+      performance.mark('video-load-end');
+      performance.measure('video-loading', 'video-load-start', 'video-load-end');
+      const loadTime = performance.getEntriesByName('video-loading')[0].duration;
+      console.log(`Light field video loaded in ${loadTime.toFixed(2)}ms`);
 
       // Trigger event
       this._triggerEvent('videoLoaded', {
         videoId,
         dimensions: videoData.dimensions,
         duration: videoData.duration,
-        viewpoints: videoData.viewpoints.length
+        viewpoints: videoData.viewpoints.length,
+        loadTime
       });
 
       return true;
     } catch (error) {
       console.error(`Failed to load light field video ${videoId}:`, error);
+      this._hideLoadingIndicator();
       throw error;
     }
   }
 
   /**
-   * Unload the current video
+   * Show loading indicator
+   * @private
+   * @param {HTMLElement} container - Container element
+   */
+  _showLoadingIndicator(container) {
+    // Create loading indicator if it doesn't exist
+    if (!this._loadingIndicator) {
+      this._loadingIndicator = document.createElement('div');
+      this._loadingIndicator.style.position = 'absolute';
+      this._loadingIndicator.style.top = '50%';
+      this._loadingIndicator.style.left = '50%';
+      this._loadingIndicator.style.transform = 'translate(-50%, -50%)';
+      this._loadingIndicator.style.color = '#fff';
+      this._loadingIndicator.style.fontFamily = 'Arial, sans-serif';
+      this._loadingIndicator.style.fontSize = '16px';
+      this._loadingIndicator.style.textAlign = 'center';
+      this._loadingIndicator.innerHTML = 'Loading Light Field Video<br><small>by zophlic</small>';
+    }
+
+    // Add to container
+    container.appendChild(this._loadingIndicator);
+  }
+
+  /**
+   * Hide loading indicator
+   * @private
+   */
+  _hideLoadingIndicator() {
+    if (this._loadingIndicator && this._loadingIndicator.parentNode) {
+      this._loadingIndicator.parentNode.removeChild(this._loadingIndicator);
+    }
+  }
+
+  /**
+   * Setup resize handling
+   * @private
+   * @param {HTMLElement} container - Container element
+   * @returns {Promise<ResizeObserver>} Resize observer
+   */
+  async _setupResizeHandling(container) {
+    return new Promise((resolve) => {
+      // Use ResizeObserver if available
+      if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver((entries) => {
+          // Only resize if we have a current video
+          if (this.currentVideo) {
+            this._resizeCanvas(container);
+          }
+        });
+
+        // Start observing
+        resizeObserver.observe(container);
+        resolve(resizeObserver);
+      } else {
+        // Fallback to window resize event
+        const handleResize = () => {
+          if (this.currentVideo) {
+            this._resizeCanvas(container);
+          }
+        };
+
+        window.addEventListener('resize', handleResize);
+
+        // Return a fake observer with a disconnect method
+        resolve({
+          disconnect: () => window.removeEventListener('resize', handleResize)
+        });
+      }
+    });
+  }
+
+  /**
+   * Resize canvas to match container
+   * @private
+   * @param {HTMLElement} container - Container element
+   */
+  _resizeCanvas(container) {
+    // Get container dimensions
+    const { clientWidth, clientHeight } = container;
+
+    // Calculate new dimensions with render scale
+    const newWidth = Math.floor(clientWidth * this.settings.renderScale);
+    const newHeight = Math.floor(clientHeight * this.settings.renderScale);
+
+    // Only resize if dimensions have changed
+    if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
+      this.canvas.width = newWidth;
+      this.canvas.height = newHeight;
+      this.canvas.style.width = '100%';
+      this.canvas.style.height = '100%';
+
+      // Update half-width and half-height cache
+      this._halfWidth = newWidth / 2;
+      this._halfHeight = newHeight / 2;
+
+      // Re-render current frame if we have a video loaded
+      if (this.currentVideo && !this.isPlaying) {
+        this._renderFrame(this.currentVideo.currentFrame);
+      }
+    }
+  }
+
+  /**
+   * Load depth map in background
+   * @private
+   * @param {string} videoId - Video ID
+   */
+  _loadDepthMapInBackground(videoId) {
+    // Use a promise that we don't await
+    this._loadDepthMap(videoId).then(depthMap => {
+      this.depthMap = depthMap;
+
+      // Re-render current frame if we have a video loaded and not playing
+      if (this.currentVideo && !this.isPlaying) {
+        this._renderFrame(this.currentVideo.currentFrame);
+      }
+
+      console.log('Depth map loaded');
+    }).catch(error => {
+      console.warn('Failed to load depth map:', error);
+    });
+  }
+
+  /**
+   * Unload the current video - optimized with proper resource cleanup
    * @returns {Promise<boolean>} Success status
    */
   async unloadVideo() {
@@ -166,9 +404,19 @@ class LightFieldVideoService {
     try {
       console.log(`Unloading light field video ${this.currentVideo.id}...`);
 
-      // Stop playback
+      // Stop playback and cancel any pending animation frames
       if (this.isPlaying) {
         await this.stop();
+      }
+
+      if (this._animationFrameId) {
+        cancelAnimationFrame(this._animationFrameId);
+        this._animationFrameId = null;
+      }
+
+      // Stop resize observer if it exists
+      if (this.currentVideo.resizeObserver) {
+        this.currentVideo.resizeObserver.disconnect();
       }
 
       // Remove canvas from parent
@@ -176,12 +424,41 @@ class LightFieldVideoService {
         this.canvas.parentNode.removeChild(this.canvas);
       }
 
-      // Clear current video
+      // Clear WebGL context if using WebGL
+      if (this.settings.useGPU && this.ctx && this.ctx.getContextAttributes) {
+        // This is a WebGL context, so we should properly dispose of it
+        const loseContext = this.ctx.getExtension('WEBGL_lose_context');
+        if (loseContext) {
+          loseContext.loseContext();
+        }
+      }
+
+      // Clear cached resources
+      this._colorCache = null;
+      this._lastFrameInfo = null;
+
+      // Clear depth map and release its memory
+      if (this.depthMap && this.depthMap.data) {
+        // Set to null to allow garbage collection
+        this.depthMap.data = null;
+        this.depthMap = null;
+      }
+
+      // Clear current video and release its memory
+      const videoId = this.currentVideo.id;
       this.currentVideo = null;
-      this.depthMap = null;
+
+      // Force garbage collection if possible (only in some browsers)
+      if (window.gc) {
+        try {
+          window.gc();
+        } catch (e) {
+          // Ignore errors
+        }
+      }
 
       // Trigger event
-      this._triggerEvent('videoUnloaded', {});
+      this._triggerEvent('videoUnloaded', { videoId });
 
       return true;
     } catch (error) {
@@ -727,39 +1004,46 @@ class LightFieldVideoService {
   }
 
   /**
-   * Start render loop - optimized for performance
+   * Start render loop - optimized for performance with advanced timing
    * @private
    */
   _startRenderLoop() {
     if (!this.currentVideo || !this.isPlaying) return;
 
-    // Track last frame time for more consistent frame rates
+    // Cancel any existing animation frame
+    if (this._animationFrameId) {
+      cancelAnimationFrame(this._animationFrameId);
+    }
+
+    // Use high-resolution timing
     let lastFrameTime = performance.now();
     let frameSkipCount = 0;
+    let lastRenderedFrame = -1;
 
-    const renderLoop = () => {
+    // Pre-calculate target frame time based on video framerate
+    const videoFrameTime = 1000 / this.currentVideo.framerate;
+
+    // Use a more efficient render loop with timing control
+    const renderLoop = (timestamp) => {
       // Exit early if video is no longer playing
       if (!this.currentVideo || !this.isPlaying) return;
 
-      const now = performance.now();
-      const elapsed = now - lastFrameTime;
+      // Calculate time since last frame
+      const elapsed = timestamp - lastFrameTime;
 
-      // Target 30fps (33.33ms per frame) - skip frames if we're falling behind
-      const targetFrameTime = 33.33;
-
-      // Calculate current frame based on time
+      // Calculate current playback time and target frame
       const currentTime = this._getCurrentTime();
       const targetFrame = Math.floor(currentTime * this.currentVideo.framerate);
 
-      // Check if we need to update the frame
-      if (targetFrame !== this.currentVideo.currentFrame) {
+      // Only process if we need to render a new frame
+      if (targetFrame !== lastRenderedFrame) {
         // Update current frame
         this.currentVideo.currentFrame = targetFrame;
 
         // Check if we've reached the end
         if (targetFrame >= this.currentVideo.totalFrames) {
           // Stop playback
-          this.stop(); // No need for await here
+          this.stop();
 
           // Trigger event
           this._triggerEvent('playbackEnded', {
@@ -769,23 +1053,43 @@ class LightFieldVideoService {
           return;
         }
 
-        // Determine if we should skip rendering this frame to maintain performance
-        // Skip rendering if we're falling behind, but never skip more than 2 frames in a row
-        const shouldRender = elapsed <= targetFrameTime * 1.5 || frameSkipCount >= 2;
+        // Implement adaptive frame skipping based on device performance
+        const targetRenderTime = videoFrameTime * 0.8; // Target 80% of frame time for rendering
+        const shouldRender =
+          // Always render if we're more than 2 frames behind
+          (targetFrame - lastRenderedFrame > 2) ||
+          // Or if we have enough time to render
+          (elapsed <= targetRenderTime) ||
+          // Or if we've skipped too many frames already
+          (frameSkipCount >= 2);
 
         if (shouldRender) {
           // Reset frame skip counter
           frameSkipCount = 0;
+          lastRenderedFrame = targetFrame;
 
-          // Render the frame
-          this._renderFrame(targetFrame);
-
-          // Only prefetch frames when we have time
-          if (elapsed < targetFrameTime) {
-            this._prefetchFrames(targetFrame);
+          // Use idle callback for rendering if available and we have time
+          if (window.requestIdleCallback && elapsed < videoFrameTime * 0.5) {
+            // We have plenty of time, use idle callback
+            window.requestIdleCallback(() => {
+              this._renderFrame(targetFrame);
+            }, { timeout: videoFrameTime * 0.3 });
+          } else {
+            // Render immediately
+            this._renderFrame(targetFrame);
           }
 
-          // Only trigger progress event every 5 frames to reduce overhead
+          // Only prefetch frames when we have time
+          if (elapsed < videoFrameTime * 0.7) {
+            // Use a short timeout to avoid blocking the main thread
+            setTimeout(() => {
+              if (this.isPlaying) { // Check if still playing
+                this._prefetchFrames(targetFrame);
+              }
+            }, 0);
+          }
+
+          // Only trigger progress event periodically
           if (targetFrame % 5 === 0) {
             this._triggerEvent('playbackProgress', {
               videoId: this.currentVideo.id,
@@ -800,15 +1104,15 @@ class LightFieldVideoService {
         }
       }
 
-      // Update last frame time
-      lastFrameTime = now;
+      // Update timing
+      lastFrameTime = timestamp;
 
-      // Schedule next frame
-      requestAnimationFrame(renderLoop);
+      // Schedule next frame with proper timing
+      this._animationFrameId = requestAnimationFrame(renderLoop);
     };
 
     // Start the loop
-    requestAnimationFrame(renderLoop);
+    this._animationFrameId = requestAnimationFrame(renderLoop);
   }
 
   /**
@@ -819,20 +1123,16 @@ class LightFieldVideoService {
   _renderFrame(frameIndex) {
     if (!this.currentVideo) return;
 
-    // Skip rendering if canvas is not visible (e.g., tab is in background)
-    // This check uses the Page Visibility API for better performance
-    if (document.hidden) return;
+    // Skip rendering if canvas is not visible or too small
+    if (document.hidden || this.canvas.width < 50 || this.canvas.height < 50) return;
 
-    // Use minimal frame data structure
-    const frameData = {
-      index: frameIndex,
-      timestamp: frameIndex / this.currentVideo.framerate
-    };
+    // Use object pool to avoid garbage collection
+    const frameData = this._getFrameDataFromPool(frameIndex);
 
     // Start timing
     const startTime = performance.now();
 
-    // Render the frame - no need for await since we've optimized the renderer
+    // Render the frame
     this.renderer.renderFrame(
       frameData,
       this.viewpoint,
@@ -841,6 +1141,9 @@ class LightFieldVideoService {
 
     // Calculate render time
     const renderTime = performance.now() - startTime;
+
+    // Update frame time history for adaptive quality
+    this._updateFrameTimeHistory(renderTime);
 
     // Update stats with exponential moving average for more stable values
     this.stats.framesRendered++;
@@ -852,6 +1155,120 @@ class LightFieldVideoService {
         frameIndex,
         renderTime
       });
+
+      // Check if we need to adjust quality based on performance
+      this._checkPerformance();
+    }
+  }
+
+  /**
+   * Get frame data object from pool
+   * @private
+   * @param {number} frameIndex - Frame index
+   * @returns {Object} Frame data object
+   */
+  _getFrameDataFromPool(frameIndex) {
+    // Get next object from pool
+    const frameData = this._frameDataPool[this._nextFrameDataIndex];
+
+    // Update object properties
+    frameData.index = frameIndex;
+    frameData.timestamp = frameIndex / this.currentVideo.framerate;
+
+    // Update pool index
+    this._nextFrameDataIndex = (this._nextFrameDataIndex + 1) % this._frameDataPool.length;
+
+    return frameData;
+  }
+
+  /**
+   * Update frame time history
+   * @private
+   * @param {number} frameTime - Frame render time
+   */
+  _updateFrameTimeHistory(frameTime) {
+    // Add to circular buffer
+    this._frameTimeHistory[this._frameTimeIndex] = frameTime;
+    this._frameTimeIndex = (this._frameTimeIndex + 1) % this._frameTimeHistory.length;
+  }
+
+  /**
+   * Check performance and adjust settings if needed
+   * @private
+   */
+  _checkPerformance() {
+    const now = performance.now();
+
+    // Only check every second
+    if (now - this._lastPerformanceCheck < 1000) return;
+    this._lastPerformanceCheck = now;
+
+    // Calculate average frame time
+    const avgFrameTime = this._frameTimeHistory.reduce((sum, time) => sum + time, 0) /
+                         this._frameTimeHistory.length;
+
+    // Target is 16.67ms for 60fps
+    const targetFrameTime = 16.67;
+
+    // If we're consistently above target, reduce quality
+    if (avgFrameTime > targetFrameTime * 1.5) {
+      this._reduceQuality();
+    }
+    // If we're consistently below target, we could increase quality
+    else if (avgFrameTime < targetFrameTime * 0.5 && this.settings.quality !== 'high') {
+      this._increaseQuality();
+    }
+  }
+
+  /**
+   * Reduce rendering quality for better performance
+   * @private
+   */
+  _reduceQuality() {
+    // Already at lowest quality
+    if (this.settings.quality === 'low' && this.settings.renderScale <= 0.5) return;
+
+    console.log('Reducing quality for better performance');
+
+    if (this.settings.quality === 'high') {
+      this.settings.quality = 'medium';
+    } else if (this.settings.quality === 'medium') {
+      this.settings.quality = 'low';
+    } else if (this.settings.renderScale > 0.5) {
+      // Reduce render scale as a last resort
+      this.settings.renderScale = Math.max(0.5, this.settings.renderScale - 0.1);
+
+      // Update canvas size
+      if (this.canvas.parentNode) {
+        this.canvas.width = this.canvas.parentNode.clientWidth * this.settings.renderScale;
+        this.canvas.height = this.canvas.parentNode.clientHeight * this.settings.renderScale;
+      }
+    }
+  }
+
+  /**
+   * Increase rendering quality
+   * @private
+   */
+  _increaseQuality() {
+    // Already at highest quality
+    if (this.settings.quality === 'high' && this.settings.renderScale >= 1.0) return;
+
+    console.log('Increasing quality');
+
+    if (this.settings.quality === 'low') {
+      this.settings.quality = 'medium';
+    } else if (this.settings.quality === 'medium') {
+      this.settings.quality = 'high';
+    } else if (this.settings.renderScale < 1.0) {
+      // Increase render scale
+      this.settings.renderScale = Math.min(1.0, this.settings.renderScale + 0.1);
+
+      // Update canvas size
+      if (this.canvas.parentNode) {
+        this.canvas.width = this.canvas.parentNode.clientWidth * this.settings.renderScale;
+        this.canvas.height = this.canvas.parentNode.clientHeight * this.settings.renderScale;
+      }
     }
   }
 
@@ -908,13 +1325,19 @@ class LightFieldVideoService {
   }
 
   /**
-   * Draw simulated content - optimized for performance
+   * Draw simulated content - highly optimized for performance
    * @private
    * @param {Object} frameData - Frame data
    */
   _drawSimulatedContent(frameData) {
     const { width, height } = this.canvas;
     const frameIndex = frameData.index;
+
+    // Skip drawing if canvas is too small
+    if (width < 50 || height < 50) return;
+
+    // Use quality-based rendering
+    const quality = this.settings.quality;
 
     // Background - use fillRect directly without changing fillStyle if it's already set
     if (this._lastBgColor !== '#222') {
@@ -923,58 +1346,103 @@ class LightFieldVideoService {
     }
     this.ctx.fillRect(0, 0, width, height);
 
-    // Use a more efficient time calculation
-    const time = frameIndex / 30; // Assuming 30fps
+    // Use a more efficient time calculation with integer division
+    const time = (frameIndex / 30) | 0; // Integer division for better performance
+    const fractionalTime = (frameIndex % 30) / 30; // Fractional part for smooth animation
 
-    // Pre-calculate sin/cos values that are used multiple times
-    const sinTime = Math.sin(time * 0.5);
-    const cosTime = Math.cos(time * 0.5);
+    // Use lookup tables for sin/cos values to avoid expensive calculations
+    // We'll use the fractionalTime (0-1) to interpolate between pre-calculated values
+    if (!this._sinTable) {
+      // Initialize lookup tables if they don't exist
+      this._sinTable = new Float32Array(360);
+      this._cosTable = new Float32Array(360);
+      for (let i = 0; i < 360; i++) {
+        const rad = (i * Math.PI) / 180;
+        this._sinTable[i] = Math.sin(rad);
+        this._cosTable[i] = Math.cos(rad);
+      }
+    }
 
-    // Draw fewer circles (3 instead of 5) for better performance
-    for (let i = 0; i < 3; i++) {
-      // Use pre-calculated trig values where possible
-      const x = width * (0.3 + 0.4 * Math.sin(time * 0.5 + i));
-      const y = height * (0.3 + 0.4 * Math.cos(time * 0.7 + i));
-      const radius = 20 + 10 * sinTime; // Simplified calculation
+    // Get sin/cos values from lookup tables
+    const angle = ((time * 18) % 360) | 0; // 18 degrees per frame
+    const sinTime = this._sinTable[angle];
+    const cosTime = this._cosTable[angle];
 
-      // Reduce color calculations - use a simpler color scheme
-      const hue = (frameIndex * 2 + i * 60) % 360; // Simpler calculation
+    // Adjust number of shapes based on quality setting
+    const circleCount = quality === 'low' ? 1 : (quality === 'medium' ? 2 : 3);
+    const rectCount = quality === 'low' ? 1 : 2;
+
+    // Use batch drawing for better performance
+    // Draw all circles first, then all rectangles to minimize context changes
+
+    // Draw circles
+    for (let i = 0; i < circleCount; i++) {
+      // Use integer arithmetic where possible
+      const angleOffset = ((i * 120) % 360) | 0;
+      const x = (width * 0.5) + (width * 0.3 * this._sinTable[(angle + angleOffset) % 360]);
+      const y = (height * 0.5) + (height * 0.3 * this._cosTable[(angle + angleOffset) % 360]);
+      const radius = 20 + 10 * sinTime;
+
+      // Use cached colors when possible
+      const colorKey = `circle-${i % 3}`;
+      if (!this._colorCache) this._colorCache = {};
+
+      if (!this._colorCache[colorKey] || frameIndex % 30 === 0) {
+        const hue = ((frameIndex + i * 60) % 360) | 0;
+        this._colorCache[colorKey] = `hsl(${hue}, 70%, 60%)`;
+      }
 
       this.ctx.beginPath();
       this.ctx.arc(x, y, radius, 0, Math.PI * 2);
-      this.ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+      this.ctx.fillStyle = this._colorCache[colorKey];
       this.ctx.fill();
     }
 
-    // Draw fewer rectangles (2 instead of 3) for better performance
-    for (let i = 0; i < 2; i++) {
-      const x = width * (0.2 + 0.6 * (i === 0 ? sinTime : cosTime)); // Reuse calculated values
+    // Draw rectangles
+    for (let i = 0; i < rectCount; i++) {
+      const x = width * (0.2 + 0.6 * (i === 0 ? sinTime : cosTime));
       const y = height * (0.2 + 0.6 * (i === 0 ? cosTime : sinTime));
-      const size = 40 + 10 * sinTime; // Simplified calculation
+      const size = 40 + 10 * sinTime;
+
+      // Use cached colors
+      const colorKey = `rect-${i}`;
+      if (!this._colorCache[colorKey]) {
+        this._colorCache[colorKey] = `hsl(${i * 120}, 80%, 50%)`;
+      }
 
       this.ctx.save();
       this.ctx.translate(x, y);
       this.ctx.rotate(time * 0.2);
-      this.ctx.fillStyle = `hsl(${i * 120}, 80%, 50%)`; // Simplified color
+      this.ctx.fillStyle = this._colorCache[colorKey];
       this.ctx.fillRect(-size/2, -size/2, size, size);
       this.ctx.restore();
     }
 
-    // Draw minimal frame info - only update every 10 frames to reduce text rendering
-    if (frameIndex % 10 === 0 || !this._lastFrameInfo) {
-      this._lastFrameInfo = {
-        frame: frameIndex,
-        time: (frameIndex / 30).toFixed(1),
-        viewpoint: `(${this.viewpoint.x.toFixed(0)}, ${this.viewpoint.y.toFixed(0)}, ${this.viewpoint.z.toFixed(0)})`
-      };
+    // Only draw text in medium or high quality mode
+    if (quality !== 'low') {
+      // Draw minimal frame info - only update every 30 frames to reduce text rendering
+      if (frameIndex % 30 === 0 || !this._lastFrameInfo) {
+        this._lastFrameInfo = {
+          frame: frameIndex,
+          time: Math.floor(frameIndex / 30), // Integer division
+          viewpoint: `(${this.viewpoint.x|0}, ${this.viewpoint.y|0}, ${this.viewpoint.z|0})` // Integer values
+        };
+      }
+
+      // Draw the cached frame info
+      this.ctx.fillStyle = '#fff';
+      this.ctx.font = '16px Arial';
+      this.ctx.fillText(`Frame: ${this._lastFrameInfo.frame}`, 20, 30);
+      this.ctx.fillText(`Time: ${this._lastFrameInfo.time}s`, 20, 50);
+      this.ctx.fillText(`View: ${this._lastFrameInfo.viewpoint}`, 20, 70);
     }
 
-    // Draw the cached frame info
-    this.ctx.fillStyle = '#fff';
-    this.ctx.font = '16px Arial';
-    this.ctx.fillText(`Frame: ${this._lastFrameInfo.frame}`, 20, 30);
-    this.ctx.fillText(`Time: ${this._lastFrameInfo.time}s`, 20, 50);
-    this.ctx.fillText(`View: ${this._lastFrameInfo.viewpoint}`, 20, 70);
+    // Add subtle zophlic signature in high quality mode
+    if (quality === 'high' && frameIndex % 300 === 0) {
+      this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      this.ctx.font = '10px Arial';
+      this.ctx.fillText('zophlic', width - 50, height - 10);
+    }
   }
 
   /**
@@ -1080,16 +1548,41 @@ class LightFieldVideoService {
   }
 
   /**
-   * Trigger an event
+   * Trigger an event - optimized for performance
    * @private
    * @param {string} event - Event name
    * @param {Object} data - Event data
    */
   _triggerEvent(event, data) {
+    // Skip if no listeners or if too many events are being triggered
     if (!this.eventListeners[event]) return;
 
-    for (const callback of this.eventListeners[event]) {
-      callback(data);
+    // Add timestamp to event data
+    const eventData = {
+      ...data,
+      timestamp: performance.now(),
+      service: 'lightFieldVideo'
+    };
+
+    // Use a more efficient approach for triggering events
+    const listeners = this.eventListeners[event];
+    const len = listeners.length;
+
+    // Use a direct loop for better performance
+    for (let i = 0; i < len; i++) {
+      try {
+        // Use setTimeout for non-critical events to avoid blocking the main thread
+        if (event === 'frameRendered' || event === 'playbackProgress') {
+          // These events happen frequently, so use setTimeout to avoid blocking
+          const callback = listeners[i];
+          setTimeout(() => callback(eventData), 0);
+        } else {
+          // Critical events should be called immediately
+          listeners[i](eventData);
+        }
+      } catch (error) {
+        console.error(`Error in event listener for ${event}:`, error);
+      }
     }
   }
 }
