@@ -1,0 +1,79 @@
+{
+  "appId": "com.zophlic.filo",
+  "appName": "Filo",
+  "webDir": "build",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "launchAutoHide": true,
+      "backgroundColor": "#1A1A1A",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "androidSpinnerStyle": "large",
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#999999",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#1A1A1A"
+    },
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "CapacitorCookies": {
+      "enabled": true
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#488AFF"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "CapacitorFileSystem": {
+      "enabled": true
+    },
+    "CapacitorPreferences": {
+      "enabled": true
+    }
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#1A1A1A",
+    "buildOptions": {
+      "keystorePath": "filo.keystore",
+      "keystorePassword": "zophlic",
+      "keystoreAlias": "filo",
+      "keystoreAliasPassword": "zophlic",
+      "releaseType": "APK"
+    },
+    "permissions": [
+      "android.permission.INTERNET",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.ACCESS_NETWORK_STATE",
+      "android.permission.ACCESS_WIFI_STATE",
+      "android.permission.WAKE_LOCK",
+      "android.permission.VIBRATE",
+      "android.permission.RECEIVE_BOOT_COMPLETED",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+    ]
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#1A1A1A",
+    "preferredContentMode": "mobile",
+    "useUserAgent": false,
+    "limitsNavigationsToAppBoundDomains": true
+  }
+}

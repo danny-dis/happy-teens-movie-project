@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1920" height="1080" fill="#121212"/>
+  <path d="M768 480L960 416L1152 480V608L960 672L768 608V480Z" fill="#FF5722" stroke="#FFFFFF" stroke-width="16"/>
+  <path d="M960 416V672" stroke="#FFFFFF" stroke-width="16"/>
+  <path d="M768 480L1152 608" stroke="#FFFFFF" stroke-width="16"/>
+  <path d="M1152 480L768 608" stroke="#FFFFFF" stroke-width="16"/>
+  <text x="960" y="800" font-family="Arial" font-size="96" fill="#FFFFFF" text-anchor="middle">MOVO</text>
+  <text x="960" y="900" font-family="Arial" font-size="48" fill="#FFFFFF" text-anchor="middle">by zophlic</text>
+</svg>

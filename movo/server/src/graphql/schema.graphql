@@ -1,0 +1,366 @@
+"""
+Movo GraphQL Schema
+Defines the GraphQL API for the Movo application
+@author zophlic
+"""
+
+# Scalar types
+scalar DateTime
+scalar JSON
+scalar Upload
+
+# Enums
+enum MediaType {
+  MOVIE
+  TV_SHOW
+  EPISODE
+}
+
+enum MediaStatus {
+  RELEASED
+  UPCOMING
+  IN_PRODUCTION
+}
+
+enum MediaSource {
+  STREAMING
+  LOCAL
+  P2P
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+enum MediaSortField {
+  TITLE
+  RELEASE_DATE
+  RATING
+  POPULARITY
+  ADDED_DATE
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum DownloadStatus {
+  QUEUED
+  DOWNLOADING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+enum StreamingQuality {
+  AUTO
+  LOW
+  MEDIUM
+  HIGH
+  ULTRA
+}
+
+# Input types
+input MediaFilterInput {
+  type: MediaType
+  genres: [ID!]
+  releaseYear: Int
+  minRating: Float
+  maxRating: Float
+  search: String
+}
+
+input MediaSortInput {
+  field: MediaSortField!
+  direction: SortDirection!
+}
+
+input PaginationInput {
+  page: Int = 1
+  limit: Int = 20
+}
+
+input UserPreferencesInput {
+  theme: String
+  language: String
+  subtitlesEnabled: Boolean
+  subtitlesLanguage: String
+  autoplayEnabled: Boolean
+  autoplayNextEnabled: Boolean
+  defaultQuality: StreamingQuality
+  defaultAudioLanguage: String
+  preferredGenres: [ID!]
+}
+
+input WatchProgressInput {
+  mediaId: ID!
+  position: Float!
+  duration: Float!
+  completed: Boolean
+}
+
+input StreamingSessionInput {
+  mediaId: ID!
+  quality: StreamingQuality!
+  source: MediaSource!
+}
+
+input DownloadInput {
+  mediaId: ID!
+  quality: StreamingQuality!
+}
+
+input UserInput {
+  username: String!
+  email: String!
+  password: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+# Types
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  totalPages: Int!
+  totalItems: Int!
+  currentPage: Int!
+}
+
+type MediaConnection {
+  edges: [MediaEdge!]!
+  pageInfo: PageInfo!
+}
+
+type MediaEdge {
+  node: Media!
+  cursor: String!
+}
+
+type GenreConnection {
+  edges: [GenreEdge!]!
+  pageInfo: PageInfo!
+}
+
+type GenreEdge {
+  node: Genre!
+  cursor: String!
+}
+
+type Media {
+  id: ID!
+  title: String!
+  description: String
+  type: MediaType!
+  status: MediaStatus!
+  releaseDate: DateTime
+  duration: Int
+  posterUrl: String
+  backdropUrl: String
+  trailerUrl: String
+  rating: Float
+  popularity: Float
+  genres: [Genre!]!
+  cast: [Person!]!
+  director: Person
+  isDownloaded: Boolean!
+  isNew: Boolean!
+  streamingSources: [StreamingSource!]!
+  similarMedia(limit: Int = 10): [Media!]!
+  watchProgress: WatchProgress
+  isInWatchlist: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Genre {
+  id: ID!
+  name: String!
+  media(pagination: PaginationInput, filter: MediaFilterInput, sort: MediaSortInput): MediaConnection!
+}
+
+type Person {
+  id: ID!
+  name: String!
+  profileUrl: String
+  media: [Media!]!
+}
+
+type StreamingSource {
+  id: ID!
+  name: String!
+  url: String!
+  quality: StreamingQuality!
+  price: Float
+  isFree: Boolean!
+}
+
+type WatchProgress {
+  mediaId: ID!
+  userId: ID!
+  position: Float!
+  duration: Float!
+  percentage: Float!
+  timestamp: DateTime!
+  completed: Boolean!
+}
+
+type Download {
+  id: ID!
+  mediaId: ID!
+  userId: ID!
+  media: Media!
+  quality: StreamingQuality!
+  progress: Float!
+  status: DownloadStatus!
+  size: Float
+  path: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type StreamingSession {
+  id: ID!
+  mediaId: ID!
+  userId: ID!
+  media: Media!
+  quality: StreamingQuality!
+  startTime: DateTime!
+  endTime: DateTime
+  progress: Float
+  source: MediaSource!
+  duration: Int
+  isActive: Boolean!
+  metrics: JSON
+}
+
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  profilePicture: String
+  role: UserRole!
+  preferences: UserPreferences!
+  watchlist: [Media!]!
+  watchHistory: [WatchHistoryItem!]!
+  downloads: [Download!]!
+  streamingSessions: [StreamingSession!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type UserPreferences {
+  theme: String!
+  language: String!
+  subtitlesEnabled: Boolean!
+  subtitlesLanguage: String!
+  autoplayEnabled: Boolean!
+  autoplayNextEnabled: Boolean!
+  defaultQuality: StreamingQuality!
+  defaultAudioLanguage: String!
+  preferredGenres: [Genre!]!
+}
+
+type WatchHistoryItem {
+  media: Media!
+  progress: WatchProgress!
+}
+
+type AuthPayload {
+  token: String!
+  refreshToken: String!
+  user: User!
+}
+
+type StreamingUrl {
+  url: String!
+  quality: StreamingQuality!
+  expiresAt: DateTime!
+  token: String!
+}
+
+type Subtitle {
+  language: String!
+  url: String!
+}
+
+# Queries
+type Query {
+  # Media queries
+  media(id: ID!): Media!
+  allMedia(pagination: PaginationInput, filter: MediaFilterInput, sort: MediaSortInput): MediaConnection!
+  searchMedia(query: String!, pagination: PaginationInput): MediaConnection!
+  trendingMedia(pagination: PaginationInput, timeWindow: String = "week"): MediaConnection!
+  recommendedMedia(pagination: PaginationInput): MediaConnection!
+  newReleases(pagination: PaginationInput): MediaConnection!
+  popularMedia(pagination: PaginationInput): MediaConnection!
+  
+  # Genre queries
+  genre(id: ID!): Genre!
+  allGenres(pagination: PaginationInput): GenreConnection!
+  
+  # User queries
+  me: User!
+  user(id: ID!): User!
+  
+  # Streaming queries
+  streamingUrl(mediaId: ID!, quality: StreamingQuality): StreamingUrl!
+  subtitles(mediaId: ID!, language: String): [Subtitle!]!
+  
+  # Download queries
+  downloads: [Download!]!
+  download(id: ID!): Download
+  
+  # Watchlist queries
+  watchlist(pagination: PaginationInput): MediaConnection!
+  watchHistory(pagination: PaginationInput): [WatchHistoryItem!]!
+  
+  # Search queries
+  search(query: String!, pagination: PaginationInput): MediaConnection!
+}
+
+# Mutations
+type Mutation {
+  # Auth mutations
+  login(input: LoginInput!): AuthPayload!
+  signup(input: UserInput!): AuthPayload!
+  refreshToken(refreshToken: String!): AuthPayload!
+  logout: Boolean!
+  
+  # User mutations
+  updateUser(username: String, profilePicture: Upload): User!
+  updateUserPreferences(preferences: UserPreferencesInput!): User!
+  
+  # Watchlist mutations
+  addToWatchlist(mediaId: ID!): Boolean!
+  removeFromWatchlist(mediaId: ID!): Boolean!
+  
+  # Watch progress mutations
+  updateWatchProgress(input: WatchProgressInput!): WatchProgress!
+  
+  # Streaming mutations
+  startStreamingSession(input: StreamingSessionInput!): StreamingSession!
+  endStreamingSession(sessionId: ID!, progress: Float!): StreamingSession!
+  updateStreamingSessionMetrics(sessionId: ID!, metrics: JSON!): StreamingSession!
+  
+  # Download mutations
+  startDownload(input: DownloadInput!): Download!
+  pauseDownload(downloadId: ID!): Download!
+  resumeDownload(downloadId: ID!): Download!
+  cancelDownload(downloadId: ID!): Boolean!
+  deleteDownload(downloadId: ID!): Boolean!
+}
+
+# Subscriptions
+type Subscription {
+  downloadProgressUpdated(downloadId: ID!): Download!
+  streamingSessionUpdated(sessionId: ID!): StreamingSession!
+  watchProgressUpdated: WatchProgress!
+  newMediaAdded(genreId: ID): Media!
+}

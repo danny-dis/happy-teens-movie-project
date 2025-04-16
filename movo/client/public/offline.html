@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#3498db">
+  <title>Movo - You're Offline</title>
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    :root {
+      --primary-color: #3498db;
+      --secondary-color: #2ecc71;
+      --background-color: #121212;
+      --surface-color: #1e1e1e;
+      --text-color: #e9ecef;
+      --text-secondary-color: #adb5bd;
+      --border-color: #2d2d2d;
+      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: var(--font-family);
+      background-color: var(--background-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+    }
+    
+    header {
+      background-color: rgba(18, 18, 18, 0.9);
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--primary-color);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+    }
+    
+    .logo-icon {
+      margin-right: 0.5rem;
+      width: 32px;
+      height: 32px;
+      background-color: var(--primary-color);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+    
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+    }
+    
+    .offline-container {
+      max-width: 600px;
+      padding: 2rem;
+      background-color: var(--surface-color);
+      border-radius: 12px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: var(--text-color);
+    }
+    
+    p {
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+      color: var(--text-secondary-color);
+      line-height: 1.5;
+    }
+    
+    .icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      color: var(--primary-color);
+    }
+    
+    .button {
+      display: inline-block;
+      background-color: var(--primary-color);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: opacity 0.2s ease;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    
+    .button:hover {
+      opacity: 0.9;
+    }
+    
+    .button-secondary {
+      background-color: transparent;
+      border: 1px solid var(--primary-color);
+      color: var(--primary-color);
+      margin-left: 1rem;
+    }
+    
+    .downloaded-content {
+      margin-top: 3rem;
+      width: 100%;
+    }
+    
+    .section-title {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: var(--text-color);
+      text-align: left;
+    }
+    
+    .content-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .content-item {
+      background-color: var(--surface-color);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.2s ease;
+    }
+    
+    .content-item:hover {
+      transform: translateY(-5px);
+    }
+    
+    .content-placeholder {
+      height: 200px;
+      background-color: rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary-color);
+    }
+    
+    .content-info {
+      padding: 0.75rem;
+    }
+    
+    .content-title {
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .content-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary-color);
+    }
+    
+    footer {
+      padding: 1.5rem;
+      text-align: center;
+      color: var(--text-secondary-color);
+      font-size: 0.875rem;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    @media (max-width: 768px) {
+      .content-list {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .offline-container {
+        padding: 1.5rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .icon {
+        font-size: 3rem;
+      }
+      
+      .button {
+        display: block;
+        width: 100%;
+        margin-bottom: 0.75rem;
+      }
+      
+      .button-secondary {
+        margin-left: 0;
+      }
+      
+      .content-list {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="logo">
+      <div class="logo-icon">M</div>
+      Movo
+    </a>
+  </header>
+  
+  <main>
+    <div class="offline-container">
+      <div class="icon">📶</div>
+      <h1>You're Offline</h1>
+      <p>
+        It looks like you're not connected to the internet. Some features may not be available while you're offline.
+        You can still access your downloaded content and browse previously cached pages.
+      </p>
+      <div>
+        <button class="button" onclick="tryReconnect()">Try Again</button>
+        <a href="/downloads" class="button button-secondary">View Downloads</a>
+      </div>
+    </div>
+    
+    <div class="downloaded-content" id="downloaded-content">
+      <h2 class="section-title">Your Downloaded Content</h2>
+      <p>Loading your downloaded content...</p>
+      <div class="content-list" id="content-list">
+        <!-- Content will be loaded dynamically -->
+      </div>
+    </div>
+  </main>
+  
+  <footer>
+    <p>© 2023 Movo by zophlic. All rights reserved.</p>
+  </footer>
+  
+  <script>
+    // Check connection status
+    function checkConnection() {
+      return navigator.onLine;
+    }
+    
+    // Try to reconnect
+    function tryReconnect() {
+      if (checkConnection()) {
+        // If online, redirect to home page
+        window.location.href = '/';
+      } else {
+        // If still offline, show message
+        alert('Still offline. Please check your internet connection and try again.');
+      }
+    }
+    
+    // Load downloaded content
+    async function loadDownloadedContent() {
+      const contentList = document.getElementById('content-list');
+      
+      try {
+        // Try to load from IndexedDB
+        if ('indexedDB' in window) {
+          const db = await openDatabase();
+          const tx = db.transaction('downloads', 'readonly');
+          const store = tx.objectStore('downloads');
+          const downloads = await store.getAll();
+          
+          if (downloads && downloads.length > 0) {
+            contentList.innerHTML = '';
+            
+            downloads.forEach(item => {
+              const element = document.createElement('div');
+              element.className = 'content-item';
+              element.innerHTML = `
+                <div class="content-placeholder">
+                  ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${item.title}" width="100%">` : 'No Image'}
+                </div>
+                <div class="content-info">
+                  <div class="content-title">${item.title}</div>
+                  <div class="content-meta">${item.year || ''}</div>
+                </div>
+              `;
+              
+              element.addEventListener('click', () => {
+                window.location.href = `/watch/${item.id}`;
+              });
+              
+              contentList.appendChild(element);
+            });
+          } else {
+            document.getElementById('downloaded-content').innerHTML = `
+              <h2 class="section-title">Your Downloaded Content</h2>
+              <p>You don't have any downloaded content yet. When you're back online, you can download movies and shows to watch offline.</p>
+            `;
+          }
+        } else {
+          throw new Error('IndexedDB not supported');
+        }
+      } catch (error) {
+        console.error('Failed to load downloaded content:', error);
+        document.getElementById('downloaded-content').innerHTML = `
+          <h2 class="section-title">Your Downloaded Content</h2>
+          <p>Unable to load your downloaded content. Please try again later.</p>
+        `;
+      }
+    }
+    
+    // Open IndexedDB database
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('movo-db', 1);
+        
+        request.onerror = (event) => {
+          reject(event.target.error);
+        };
+        
+        request.onsuccess = (event) => {
+          resolve(event.target.result);
+        };
+        
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          
+          // Create stores if they don't exist
+          if (!db.objectStoreNames.contains('downloads')) {
+            db.createObjectStore('downloads', { keyPath: 'id' });
+          }
+        };
+      });
+    }
+    
+    // Listen for online/offline events
+    window.addEventListener('online', () => {
+      const reconnectButton = document.querySelector('.button');
+      reconnectButton.textContent = 'Go Online';
+      reconnectButton.disabled = false;
+    });
+    
+    window.addEventListener('offline', () => {
+      const reconnectButton = document.querySelector('.button');
+      reconnectButton.textContent = 'Try Again';
+      reconnectButton.disabled = false;
+    });
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDownloadedContent();
+    });
+  </script>
+</body>
+</html>
