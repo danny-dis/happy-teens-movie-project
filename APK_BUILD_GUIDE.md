@@ -1,0 +1,211 @@
+# Building Movo and Filo APK Files
+
+This guide provides multiple methods to build the Android APK files for Movo and Filo applications.
+
+## Prerequisites
+
+The following tools are required to build the APKs:
+- Node.js and npm
+- Java Development Kit (JDK) 11 or higher
+- Android SDK
+- Gradle
+
+## Method 1: Using the Build Scripts
+
+If you have all the prerequisites installed, you can use the provided build scripts:
+
+### On Windows:
+```
+build-apks.bat
+```
+
+### On Unix-like systems (Linux, macOS):
+```bash
+chmod +x build-apks.sh
+./build-apks.sh
+```
+
+## Method 2: Using Ionic AppFlow (Cloud Build)
+
+If you don't have the Android development environment set up, you can use Ionic AppFlow to build the APKs in the cloud:
+
+1. Sign up for an account at [Ionic AppFlow](https://dashboard.ionicframework.com/signup)
+2. Install the Ionic CLI:
+   ```bash
+   npm install -g @ionic/cli
+   ```
+3. Initialize Ionic in each project:
+   ```bash
+   # For Movo
+   cd movo
+   ionic init
+   ionic link
+   
+   # For Filo
+   cd filo
+   ionic init
+   ionic link
+   ```
+4. Push the code to AppFlow:
+   ```bash
+   ionic deploy build --channel=production
+   ```
+5. Go to the AppFlow dashboard and create a native build for Android
+
+## Method 3: Using Docker
+
+You can use a Docker container with all the necessary tools pre-installed:
+
+1. Install Docker from [docker.com](https://www.docker.com/products/docker-desktop)
+2. Pull the Android build environment image:
+   ```bash
+   docker pull thyrlian/android-sdk
+   ```
+3. Run the container with the project mounted:
+   ```bash
+   # For Movo
+   docker run -it --rm -v /path/to/project/movo:/project thyrlian/android-sdk bash -c "cd /project && ./build-apks.sh"
+   
+   # For Filo
+   docker run -it --rm -v /path/to/project/filo:/project thyrlian/android-sdk bash -c "cd /project && ./build-apks.sh"
+   ```
+
+## Method 4: Using GitHub Actions
+
+You can set up GitHub Actions to automatically build the APKs whenever you push to the repository:
+
+1. Create a `.github/workflows/build-apks.yml` file with the following content:
+
+```yaml
+name: Build Android APKs
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli
+      
+      - name: Build Movo APK
+        run: |
+          cd movo
+          npm install
+          cd client
+          npm install
+          npm run build
+          cd ..
+          npx cap init Movo com.zophlic.movo --web-dir client/build
+          npx cap add android
+          cd android
+          ./gradlew assembleRelease
+          cd ..
+      
+      - name: Build Filo APK
+        run: |
+          cd filo
+          npm install
+          npm run build
+          npx cap init Filo com.zophlic.filo --web-dir build
+          npx cap add android
+          cd android
+          ./gradlew assembleRelease
+          cd ..
+      
+      - name: Upload APKs
+        uses: actions/upload-artifact@v2
+        with:
+          name: apks
+          path: |
+            movo/android/app/build/outputs/apk/release/app-release.apk
+            filo/android/app/build/outputs/apk/release/app-release.apk
+```
+
+2. Push this file to your repository
+3. Go to the Actions tab in your GitHub repository
+4. Run the workflow manually by clicking on "Run workflow"
+5. Download the APKs from the Artifacts section after the workflow completes
+
+## Method 5: Using a Pre-built APK Service
+
+Several online services allow you to convert web applications to APKs without requiring a local development environment:
+
+1. [PWA2APK](https://pwa2apk.com/)
+2. [AppMaker](https://appmaker.xyz/)
+3. [GondroidAPK](https://gonative.io/)
+
+To use these services:
+1. Build the web applications locally:
+   ```bash
+   # For Movo
+   cd movo/client
+   npm install
+   npm run build
+   
+   # For Filo
+   cd filo
+   npm install
+   npm run build
+   ```
+2. Upload the built web applications to the service
+3. Configure the app settings (name, icon, splash screen, etc.)
+4. Download the generated APKs
+
+## Troubleshooting
+
+If you encounter issues during the build process:
+
+1. **Missing dependencies**: Make sure all required tools are installed and properly configured
+2. **Build errors**: Check the error messages and fix any issues in the code
+3. **Capacitor errors**: Make sure you have the latest version of Capacitor installed
+4. **Android SDK issues**: Ensure the Android SDK is properly installed and the environment variables are set correctly
+
+## APK Signing
+
+The APKs generated by the build scripts are signed with a debug key. For production releases, you should sign the APKs with your own key:
+
+1. Create a keystore file:
+   ```bash
+   keytool -genkey -v -keystore my-release-key.keystore -alias alias_name -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. Sign the APK:
+   ```bash
+   jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore my-release-key.keystore app-release-unsigned.apk alias_name
+   ```
+3. Optimize the APK:
+   ```bash
+   zipalign -v 4 app-release-unsigned.apk app-release.apk
+   ```
+
+## Additional Resources
+
+- [Capacitor Documentation](https://capacitorjs.com/docs)
+- [Android Developer Documentation](https://developer.android.com/docs)
+- [Ionic Documentation](https://ionicframework.com/docs)
+
+## Support
+
+If you encounter any issues or have questions, please open an issue in the GitHub repository or contact the development team.
+
+---
+
+Created by zophlic
