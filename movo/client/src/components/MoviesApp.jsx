@@ -7,7 +7,7 @@ import ContinueWatching from "./ContinueWatching";
 import PersonalizedRecommendations from "./PersonalizedRecommendations";
 
 // OMDB API key
-const API_URL = "http://www.omdbapi.com/?apikey=d856c93";
+const API_URL = `http://www.omdbapi.com/?apikey=${process.env.REACT_APP_OMDB_API_KEY}`;
 
 const MoviesApp = ({ currentProfile, isOnline = true, chimeraMode = false }) => {
   const [movies, setMovies] = useState([]);

@@ -1,10 +1,19 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+/**
+ * Enhanced Error Boundary Component
+ * Catches and handles React errors gracefully
+ * 
+ * @author zophlic
+ * @updated 2025
+ */
 
-class ErrorBoundary extends React.Component {
+import React, { Component } from 'react';
+import PropTypes from 'prop-types';
+import './ErrorBoundary.css';
+
+class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { 
+    this.state = {
       hasError: false,
       error: null,
       errorInfo: null
@@ -17,49 +26,105 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log the error to an error reporting service
-    console.error('Error caught by ErrorBoundary:', error, errorInfo);
-    this.setState({ errorInfo });
+    // Log error details
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
     
-    // You could also log to an analytics or error tracking service here
+    this.setState({
+      error,
+      errorInfo
+    });
+
+    // Call optional onError prop
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
+
+    // Send error to analytics service if available
+    if (window.gtag) {
+      window.gtag('event', 'exception', {
+        description: `${error.toString()} ${errorInfo.componentStack}`,
+        fatal: true
+      });
+    }
   }
+
+  handleReload = () => {
+    window.location.reload();
+  };
+
+  handleGoHome = () => {
+    window.location.href = '/';
+  };
+
+  handleReset = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null
+    });
+    
+    if (this.props.onReset) {
+      this.props.onReset();
+    }
+  };
 
   render() {
     if (this.state.hasError) {
-      // You can render any custom fallback UI
-      return this.props.fallback ? (
-        this.props.fallback(this.state.error, this.state.errorInfo)
-      ) : (
+      // Use custom fallback if provided
+      if (this.props.fallback) {
+        return this.props.fallback(this.state.error, this.state.errorInfo);
+      }
+
+      // Default fallback UI
+      return (
         <div className="error-boundary">
-          <h2>Something went wrong.</h2>
-          <details style={{ whiteSpace: 'pre-wrap' }}>
-            <summary>Show details</summary>
-            {this.state.error && this.state.error.toString()}
-            <br />
-            {this.state.errorInfo && this.state.errorInfo.componentStack}
-          </details>
-          <button
-            onClick={() => {
-              this.setState({ hasError: false, error: null, errorInfo: null });
-              if (this.props.onReset) {
-                this.props.onReset();
-              }
-            }}
-            style={{
-              marginTop: '1rem',
-              padding: '0.5rem 1rem',
-              backgroundColor: '#4a90e2',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            Try Again
-          </button>
+          <div className="error-boundary__content">
+            <div className="error-boundary__icon">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            
+            <h1 className="error-boundary__title">Something went wrong</h1>
+            <p className="error-boundary__message">
+              We're sorry, but something unexpected happened. Please try again or contact support if the problem persists.
+            </p>
+
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <div className="error-boundary__details">
+                <details>
+                  <summary>Error Details (Development Only)</summary>
+                  <pre className="error-boundary__stack">
+                    {this.state.error.toString()}
+                    {this.state.errorInfo?.componentStack}
+                  </pre>
+                </details>
+              </div>
+            )}
+
+            <div className="error-boundary__actions">
+              <button 
+                className="error-boundary__button error-boundary__button--primary"
+                onClick={this.handleReload}
+              >
+                Reload Page
+              </button>
+              <button 
+                className="error-boundary__button"
+                onClick={this.handleGoHome}
+              >
+                Go Home
+              </button>
+              <button 
+                className="error-boundary__button"
+                onClick={this.handleReset}
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
         </div>
       );
     }

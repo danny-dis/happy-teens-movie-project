@@ -31,7 +31,17 @@ A fully decentralized streaming platform with absolutely no central servers. All
 
 See the README files in each project directory for specific setup and usage instructions:
 - [Movo README](./movo/README.md)
+- [Movo README](./movo/README.md)
 - [Filo README](./filo/README.md)
+
+## Setup & Configuration
+
+This project uses environment variables for configuration.
+
+1. **Movo Client**: Create `movo/client/.env` (see `deployment_guide.md`).
+2. **Movo Server**: Create `movo/server/.env` (see `deployment_guide.md`).
+3. **Install Dependencies**: Run `npm install` in each directory.
+
 
 ---
 

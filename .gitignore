@@ -1,0 +1,23 @@
+# Node modules
+**/node_modules/
+
+# Env files
+.env
+.env.*
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Dependency folders (duplicates in monorepo)
+movo/client/node_modules/
+filo/node_modules/
+movo/server/node_modules/
+filo/node_modules/
+
+# Build outputs
+movo/client/build/
+filo/build/
